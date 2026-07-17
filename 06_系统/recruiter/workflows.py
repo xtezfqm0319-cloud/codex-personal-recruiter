@@ -6,7 +6,17 @@ from pathlib import Path
 from typing import Iterable
 
 from .audit import add_pending, log_action, today
-from .files import SUPPORTED, extract_text, first_match, move_unique, safe_name, sha256
+from .files import (
+    SUPPORTED,
+    TextExtractionIncompleteError,
+    extract_text,
+    extract_text_with_report,
+    extraction_report_markdown,
+    first_match,
+    move_unique,
+    safe_name,
+    sha256,
+)
 from .frontmatter import read_markdown, update_frontmatter, write_markdown
 
 
@@ -246,14 +256,34 @@ def ingest_resumes(root: Path) -> list[dict[str, str]]:
     results: list[dict[str, str]] = []
     for source in sorted(p for p in inbox.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED):
         try:
-            text = extract_text(source)
+            extraction = extract_text_with_report(source)
+            text = extraction.text
             name = _infer_name(text, source.name)
             position = _infer_position(text, source.name, positions)
             if not name or not position:
                 reason = "无法唯一识别" + ("候选人姓名" if not name else "目标岗位")
                 moved = move_unique(source, root / "01_待处理" / "待确认" / source.name)
-                pending = add_pending(root, "待处理简历匹配", source.name, reason, f"确认后移动并建档；当前文件：{moved.relative_to(root)}")
-                results.append({"file": source.name, "status": "待确认", "pending_id": pending})
+                digest = sha256(moved)
+                quality_report = moved.with_name(f"{moved.stem}-文本提取质量.md")
+                quality_report.write_text(
+                    extraction_report_markdown(extraction.report, str(moved.relative_to(root)), digest),
+                    encoding="utf-8",
+                )
+                pending = add_pending(
+                    root,
+                    "待处理简历匹配",
+                    source.name,
+                    reason,
+                    f"确认后移动并建档；当前文件：{moved.relative_to(root)}；质量报告：{quality_report.relative_to(root)}",
+                )
+                results.append(
+                    {
+                        "file": source.name,
+                        "status": "待确认",
+                        "pending_id": pending,
+                        "quality_report": str(quality_report.relative_to(root)),
+                    }
+                )
                 continue
             candidate_dir = root / "02_岗位" / position / "候选人" / name
             overview = candidate_dir / "00_候选人总览.md"
@@ -261,14 +291,27 @@ def ingest_resumes(root: Path) -> list[dict[str, str]]:
                 data, _ = read_markdown(overview)
                 if data.get("human_decision") != "待确认":
                     moved = move_unique(source, root / "01_待处理" / "待确认" / source.name)
+                    digest = sha256(moved)
+                    quality_report = moved.with_name(f"{moved.stem}-文本提取质量.md")
+                    quality_report.write_text(
+                        extraction_report_markdown(extraction.report, str(moved.relative_to(root)), digest),
+                        encoding="utf-8",
+                    )
                     pending = add_pending(
                         root,
                         "新版简历",
                         f"{name}｜{position}",
                         "候选人已有人工确认结论，新版简历不得自动改变结论",
-                        f"人工确认如何处理 {moved.relative_to(root)}",
+                        f"人工确认如何处理 {moved.relative_to(root)}；质量报告：{quality_report.relative_to(root)}",
                     )
-                    results.append({"file": source.name, "status": "待确认", "pending_id": pending})
+                    results.append(
+                        {
+                            "file": source.name,
+                            "status": "待确认",
+                            "pending_id": pending,
+                            "quality_report": str(quality_report.relative_to(root)),
+                        }
+                    )
                     continue
             candidate_dir.mkdir(parents=True, exist_ok=True)
             canonical = candidate_dir / f"{name}-{position}{source.suffix.lower()}"
@@ -276,6 +319,11 @@ def ingest_resumes(root: Path) -> list[dict[str, str]]:
             digest = sha256(moved)
             extracted = candidate_dir / "原始简历提取文本.txt"
             extracted.write_text(text, encoding="utf-8")
+            quality_report = candidate_dir / "原始简历提取质量.md"
+            quality_report.write_text(
+                extraction_report_markdown(extraction.report, str(moved.relative_to(root)), digest),
+                encoding="utf-8",
+            )
             if not overview.exists():
                 _candidate_overview(root, position, name, moved, digest)
             analysis = candidate_dir / "01_简历分析.md"
@@ -287,8 +335,51 @@ def ingest_resumes(root: Path) -> list[dict[str, str]]:
                     f"## 输入追溯\n\n- 原始材料：`{moved.relative_to(root)}`\n- SHA-256：`{digest}`\n",
                     encoding="utf-8",
                 )
-            log_action(root, "resume.ingested", candidate=name, position=position, path=str(moved.relative_to(root)), sha256=digest)
-            results.append({"file": source.name, "status": "已建档", "candidate": name, "position": position})
+            log_action(
+                root,
+                "resume.ingested",
+                candidate=name,
+                position=position,
+                path=str(moved.relative_to(root)),
+                sha256=digest,
+                extraction_method=extraction.report.method,
+                extraction_status=extraction.report.status,
+                ocr_pages=list(extraction.report.ocr_pages),
+                unresolved_pages=list(extraction.report.unresolved_pages),
+            )
+            results.append(
+                {
+                    "file": source.name,
+                    "status": "已建档",
+                    "candidate": name,
+                    "position": position,
+                    "extraction": extraction.report.method,
+                    "quality": extraction.report.status,
+                }
+            )
+        except TextExtractionIncompleteError as exc:
+            moved = move_unique(source, root / "01_待处理" / "待确认" / source.name)
+            digest = sha256(moved)
+            quality_report = moved.with_name(f"{moved.stem}-文本提取质量.md")
+            quality_report.write_text(
+                extraction_report_markdown(exc.report, str(moved.relative_to(root)), digest),
+                encoding="utf-8",
+            )
+            pending = add_pending(
+                root,
+                "简历文本完整度待确认",
+                source.name,
+                str(exc),
+                f"检查原文件与质量报告：{quality_report.relative_to(root)}",
+            )
+            results.append(
+                {
+                    "file": source.name,
+                    "status": "待确认",
+                    "pending_id": pending,
+                    "quality_report": str(quality_report.relative_to(root)),
+                }
+            )
         except Exception as exc:
             moved = move_unique(source, root / "01_待处理" / "待确认" / source.name)
             pending = add_pending(root, "简历读取失败", source.name, str(exc), f"检查文件：{moved.relative_to(root)}")
@@ -431,14 +522,34 @@ def ingest_interviews(root: Path) -> list[dict[str, str]]:
     results: list[dict[str, str]] = []
     for source in sorted(p for p in inbox.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED):
         try:
-            text = extract_text(source)
+            extraction = extract_text_with_report(source)
+            text = extraction.text
             pairs = [(position, name) for position, name in candidates if name in f"{source.name}\n{text}" and position in f"{source.name}\n{text}"]
             round_no = _round_number(text, source.name)
             if len(pairs) != 1 or round_no is None:
                 moved = move_unique(source, root / "01_待处理" / "待确认" / source.name)
+                digest = sha256(moved)
+                quality_report = moved.with_name(f"{moved.stem}-文本提取质量.md")
+                quality_report.write_text(
+                    extraction_report_markdown(extraction.report, str(moved.relative_to(root)), digest),
+                    encoding="utf-8",
+                )
                 reason = "无法唯一识别候选人、岗位或 1—5 轮面试轮次"
-                pending = add_pending(root, "面试纪要匹配", source.name, reason, f"确认后处理：{moved.relative_to(root)}")
-                results.append({"file": source.name, "status": "待确认", "pending_id": pending})
+                pending = add_pending(
+                    root,
+                    "面试纪要匹配",
+                    source.name,
+                    reason,
+                    f"确认后处理：{moved.relative_to(root)}；质量报告：{quality_report.relative_to(root)}",
+                )
+                results.append(
+                    {
+                        "file": source.name,
+                        "status": "待确认",
+                        "pending_id": pending,
+                        "quality_report": str(quality_report.relative_to(root)),
+                    }
+                )
                 continue
             position, candidate = pairs[0]
             folder = root / "02_岗位" / position / "候选人" / candidate / "02_面试" / f"{round_no:02d}_第{round_no}轮"
@@ -447,6 +558,11 @@ def ingest_interviews(root: Path) -> list[dict[str, str]]:
             digest = sha256(raw)
             extracted = folder / "原始纪要提取文本.txt"
             extracted.write_text(text, encoding="utf-8")
+            quality_report = folder / "原始纪要提取质量.md"
+            quality_report.write_text(
+                extraction_report_markdown(extraction.report, str(raw.relative_to(root)), digest),
+                encoding="utf-8",
+            )
             report = folder / "面试报告.md"
             if not report.exists():
                 report.write_text(
@@ -462,8 +578,52 @@ def ingest_interviews(root: Path) -> list[dict[str, str]]:
             sources.append({"path": str(raw.relative_to(root)), "sha256": digest})
             update_frontmatter(overview, current_stage=f"第{round_no}轮待分析", updated_at=today(), source_files=sources)
             refresh_candidate_overview(overview)
-            log_action(root, "interview.ingested", candidate=candidate, position=position, round=round_no, sha256=digest)
-            results.append({"file": source.name, "status": "已建档", "candidate": candidate, "position": position, "round": str(round_no)})
+            log_action(
+                root,
+                "interview.ingested",
+                candidate=candidate,
+                position=position,
+                round=round_no,
+                sha256=digest,
+                extraction_method=extraction.report.method,
+                extraction_status=extraction.report.status,
+                ocr_pages=list(extraction.report.ocr_pages),
+                unresolved_pages=list(extraction.report.unresolved_pages),
+            )
+            results.append(
+                {
+                    "file": source.name,
+                    "status": "已建档",
+                    "candidate": candidate,
+                    "position": position,
+                    "round": str(round_no),
+                    "extraction": extraction.report.method,
+                    "quality": extraction.report.status,
+                }
+            )
+        except TextExtractionIncompleteError as exc:
+            moved = move_unique(source, root / "01_待处理" / "待确认" / source.name)
+            digest = sha256(moved)
+            quality_report = moved.with_name(f"{moved.stem}-文本提取质量.md")
+            quality_report.write_text(
+                extraction_report_markdown(exc.report, str(moved.relative_to(root)), digest),
+                encoding="utf-8",
+            )
+            pending = add_pending(
+                root,
+                "面试纪要文本完整度待确认",
+                source.name,
+                str(exc),
+                f"检查原文件与质量报告：{quality_report.relative_to(root)}",
+            )
+            results.append(
+                {
+                    "file": source.name,
+                    "status": "待确认",
+                    "pending_id": pending,
+                    "quality_report": str(quality_report.relative_to(root)),
+                }
+            )
         except Exception as exc:
             moved = move_unique(source, root / "01_待处理" / "待确认" / source.name)
             pending = add_pending(root, "面试纪要读取失败", source.name, str(exc), f"检查文件：{moved.relative_to(root)}")

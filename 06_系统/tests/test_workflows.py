@@ -37,6 +37,8 @@ def test_ingest_resume_and_rebuild_index(workspace: Path) -> None:
     assert result[0]["status"] == "已建档"
     resume = workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "林晓-AI产品经理.txt"
     assert resume.exists()
+    quality = workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "原始简历提取质量.md"
+    assert quality.exists() and "结论：通过" in quality.read_text(encoding="utf-8")
     record_resume_analysis(
         workspace,
         "AI产品经理",
@@ -70,6 +72,7 @@ def test_ambiguous_resume_goes_to_pending(workspace: Path) -> None:
     result = ingest_resumes(workspace)
     assert result[0]["status"] == "待确认"
     assert (workspace / "01_待处理" / "待确认" / "未知.txt").exists()
+    assert (workspace / "01_待处理" / "待确认" / "未知-文本提取质量.md").exists()
     assert "PENDING-" in (workspace / "04_全局索引" / "待确认事项.md").read_text(encoding="utf-8")
 
 
