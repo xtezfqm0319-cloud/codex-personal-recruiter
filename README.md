@@ -2,6 +2,9 @@
 
 一个直接在 Codex 中使用的本地招聘工作台。Codex 负责理解与判断，项目 Skills 约束工作流，Python 负责确定性的文件和状态操作，Markdown 保存正式主档案。
 
+> [!IMPORTANT]
+> **当前版本 v0.2.0 已支持图片版、扫描版和混合内容 PDF。** 所有 OCR 均在本地执行；无法完整识别的页面会生成质量报告并进入待确认，不会被静默当作完整文本。
+
 ## 环境
 
 - Python 3.11+
@@ -17,7 +20,7 @@ source .venv/bin/activate
 python -m pip install -e '.[dev]'
 ```
 
-### 本地 OCR
+## 图片版 PDF 与本地 OCR
 
 - 默认使用随 Python 依赖安装的 RapidOCR 本地 ONNX 模型，支持中英文，可直接在 Codex 受限环境中运行。
 - macOS 会在 RapidOCR 不可用时回退到系统 Apple Vision；其他环境还可回退到 Tesseract。Tesseract 处理中文时建议安装 `chi_sim` 语言包。
@@ -35,7 +38,7 @@ PYTHONPATH=06_系统 python -m recruiter --root . validate
 
 1. 阅读并按实际公司情况填写 `00_公司认知/`。修改长期认知属于需确认动作。
 2. 在 Codex 中说“根据这个 JD 和我讨论并新建岗位”。Codex 会使用 `create-position` Skill。
-3. 把简历放入 `01_待处理/简历/`，说“处理新简历”。
+3. 把简历放入 `01_待处理/简历/`，说“处理新简历”。文本 PDF、图片版 PDF 和扫描版 PDF 均可处理。
 4. 查看岗位下的 `本批次待人工确认.md`，用自然语言批量给出结论。
 5. 把面试纪要放入 `01_待处理/面试纪要/`，说“分析新面试纪要”。
 6. 终面前说“给某某生成终面简报”；结束后说“归档某某，结果为……”。
@@ -86,7 +89,7 @@ PYTHONPATH=06_系统 python scripts/run_demo.py
 
 真实简历、纪要和候选人目录已通过 `.gitignore` 默认排除。仍应使用磁盘加密和可靠备份，并在处理真实数据前检查 Codex/ChatGPT 数据控制设置。不要把真实数据提交到公开仓库。
 
-## 首版限制
+## 已知限制
 
 - 项目未提供独立的既有终面简报 Prompt；当前使用 `.agents/skills/generate-final-brief/references/终面简报规则.md`，可由真实 Prompt 替换。
 - OCR 识别质量受扫描清晰度、字体、排版和语言影响；低质量、手写、复杂双栏或无法完整识别的页面会进入待确认，不会被静默当作完整文本。
