@@ -1,0 +1,4 @@
+interface:
+  display_name: "创建岗位"
+  short_description: "Discuss and create a calibrated recruiting position"
+  default_prompt: "Use $create-position to discuss this JD and create a position after my confirmation."

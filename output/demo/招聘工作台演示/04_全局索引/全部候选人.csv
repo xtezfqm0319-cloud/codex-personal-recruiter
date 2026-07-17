@@ -1,0 +1,2 @@
+candidate_id,name,position,ai_recommendation,human_decision,current_stage,process_status,final_result,reusable,summary,risk,location,path
+CAN-2026-0001,陈曦,企业AI产品经理,强推,推进,流程结束,已结束,HC暂停，未录用；面试通过，人才保留,true,具备企业AI产品从灰度到规模化的直接经历，且有跨团队推进证据。,简历未给出查找时长下降的具体口径，也未说明个人对关键取舍的最终责任。,已归档,03_简历库/企业AI产品经理/陈曦/00_候选人总览.md

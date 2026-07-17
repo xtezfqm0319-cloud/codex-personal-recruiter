@@ -1,0 +1,27 @@
+position:
+  required:
+    position_id: string
+    position_name: string
+    status: [待校准, 招聘中, 暂停, 已结束]
+    created_at: date
+    updated_at: date
+    image_version: integer
+candidate:
+  required:
+    candidate_id: string
+    name: string
+    position: string
+    current_stage: string
+    ai_recommendation: [待分析, 强推, 推, 建议待定, 建议淘汰]
+    human_decision: string
+    process_status: [推进中, 已结束]
+    reusable: boolean
+    source_files: list
+permissions:
+  confirmation_required:
+    - delete_original
+    - modify_position_profile
+    - modify_human_decision
+    - cross_position_move
+    - modify_company_knowledge
+    - change_confirmed_conclusion_from_new_resume

@@ -1,0 +1,4 @@
+interface:
+  display_name: "结束候选人"
+  short_description: "Close and archive a candidate with reusable history"
+  default_prompt: "Use $close-candidate to close and archive this candidate."

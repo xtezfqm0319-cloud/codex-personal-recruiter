@@ -1,0 +1,4 @@
+interface:
+  display_name: "校准岗位"
+  short_description: "Propose evidence-based position profile calibration"
+  default_prompt: "Use $calibrate-position to analyze whether the position profile needs calibration."

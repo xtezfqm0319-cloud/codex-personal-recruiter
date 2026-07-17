@@ -1,0 +1,4 @@
+interface:
+  display_name: "处理简历"
+  short_description: "Process resumes with traceable four-tier recommendations"
+  default_prompt: "Use $process-resumes to process the resumes in the inbox."

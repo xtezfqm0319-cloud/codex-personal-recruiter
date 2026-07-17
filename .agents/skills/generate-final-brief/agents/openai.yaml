@@ -1,0 +1,4 @@
+interface:
+  display_name: "生成终面简报"
+  short_description: "Generate an evidence-traceable final interview brief"
+  default_prompt: "Use $generate-final-brief to prepare the final interview brief."

@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+06_系统/cache/*
+!06_系统/cache/.gitkeep
+01_待处理/简历/*
+01_待处理/面试纪要/*
+02_岗位/*/候选人/*
+03_简历库/*
+!01_待处理/简历/.gitkeep
+!01_待处理/面试纪要/.gitkeep
+!03_简历库/.gitkeep
+tmp/
+!output/demo/**

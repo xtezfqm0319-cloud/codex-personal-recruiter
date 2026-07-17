@@ -1,0 +1,4 @@
+interface:
+  display_name: "搜索历史人才"
+  short_description: "Search archived talent records with supporting evidence"
+  default_prompt: "Use $search-history to find reusable historical candidates."

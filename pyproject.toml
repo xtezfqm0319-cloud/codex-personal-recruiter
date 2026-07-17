@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-personal-recruiter"
+version = "0.1.0"
+description = "Local Markdown-first recruiting workbench for Codex"
+requires-python = ">=3.11"
+dependencies = [
+  "PyYAML>=6.0",
+  "pypdf>=4.0",
+  "python-docx>=1.1",
+  "charset-normalizer>=3.3",
+  "rapidfuzz>=3.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+recruiter = "recruiter.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "06_系统"}
+
+[tool.setuptools.packages.find]
+where = ["06_系统"]
+
+[tool.pytest.ini_options]
+testpaths = ["06_系统/tests"]
+addopts = "-q"

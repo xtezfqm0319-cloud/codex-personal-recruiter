@@ -1,0 +1,19 @@
+version: 1
+recommendations:
+  - 强推
+  - 推
+  - 建议待定
+  - 建议淘汰
+position_statuses:
+  - 待校准
+  - 招聘中
+  - 暂停
+  - 已结束
+interview_rounds:
+  min: 1
+  max: 5
+paths:
+  positions: 02_岗位
+  archive: 03_简历库
+  indexes: 04_全局索引
+  logs: 07_运行记录

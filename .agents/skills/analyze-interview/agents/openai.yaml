@@ -1,0 +1,4 @@
+interface:
+  display_name: "分析面试"
+  short_description: "Analyze interview notes with separated conclusions"
+  default_prompt: "Use $analyze-interview to process the new interview notes."

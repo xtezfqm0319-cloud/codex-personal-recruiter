@@ -1,0 +1,4 @@
+interface:
+  display_name: "确认筛选"
+  short_description: "Record confirmed screening decisions without overwrites"
+  default_prompt: "Use $confirm-screening to record my screening decisions."
