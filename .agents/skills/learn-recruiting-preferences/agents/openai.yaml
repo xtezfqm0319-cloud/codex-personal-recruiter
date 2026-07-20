@@ -1,0 +1,4 @@
+interface:
+  display_name: "学习招聘偏好"
+  short_description: "从明确反馈中学习并确认可重复使用的个人招聘判断偏好"
+  default_prompt: "请使用 $learn-recruiting-preferences，把我的反馈整理为可复用偏好。"

@@ -10,3 +10,5 @@ description: Close and archive an active candidate, record the final result, det
 3. Run `close-candidate --result "..."` and include `--reusable` only when supported.
 4. The CLI moves the complete folder to `03_简历库/`, retains a short position index, and never deletes originals.
 5. Run `rebuild-index`, `search-history` for a sanity check, and `validate`.
+6. If the user gives a reusable reason for the outcome or corrects an earlier assessment, apply `$learn-recruiting-preferences`. Otherwise do not infer a preference from the final result alone.
+7. Report the final result, reuse value, and the most important lesson for future similar candidates in concise business language.

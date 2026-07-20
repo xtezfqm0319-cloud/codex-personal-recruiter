@@ -32,7 +32,13 @@ def main() -> int:
         shutil.rmtree(root)
     root.mkdir(parents=True)
     init_workspace(root)
-    for relative in ["AGENTS.md", "00_公司认知/公司与业务.md", "00_公司认知/通用招聘标准.md", "00_公司认知/能力特质定义.md"]:
+    for relative in [
+        "AGENTS.md",
+        "00_公司认知/公司与业务.md",
+        "00_公司认知/通用招聘标准.md",
+        "00_公司认知/能力特质定义.md",
+        "00_公司认知/个人招聘判断偏好.md",
+    ]:
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(PROJECT / relative, target)

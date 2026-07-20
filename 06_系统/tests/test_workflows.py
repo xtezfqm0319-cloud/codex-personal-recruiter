@@ -50,6 +50,9 @@ def test_ingest_resume_and_rebuild_index(workspace: Path) -> None:
         "个人贡献边界待验证。",
         "985",
     )
+    analysis = (workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "01_简历分析.md").read_text(encoding="utf-8")
+    assert "## 相对位置" in analysis
+    assert "## 已确认个人偏好的影响" in analysis
     counts = rebuild_indexes(workspace)
     assert counts["candidates"] == 1
     assert "林晓" in (workspace / "02_岗位" / "AI产品经理" / "本批次待人工确认.md").read_text(encoding="utf-8")
@@ -98,9 +101,15 @@ def test_full_interview_brief_archive_and_history(workspace: Path) -> None:
     )
     assert ingest_interviews(workspace)[0]["status"] == "已建档"
     record_interview_analysis(workspace, "AI产品经理", "林晓", 1, "面试官认为拆解清楚。", "展示了分阶段验证思路。", "纪要记录先灰度后全量。", "上线效果数据待核验。")
+    report = (workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "02_面试" / "01_第1轮" / "面试报告.md").read_text(encoding="utf-8")
+    assert "## 本轮改变了什么" in report
+    assert "## Codex 下一步倾向" in report
     set_interview_decision(workspace, "AI产品经理", "林晓", 1, "通过，进入终面")
     brief = generate_final_brief(workspace, "AI产品经理", "林晓", "薪资期望在预算内。")
-    assert brief.exists() and "不替代最终录用决定" in brief.read_text(encoding="utf-8")
+    brief_text = brief.read_text(encoding="utf-8")
+    assert brief.exists() and "不替代最终录用决定" in brief_text
+    assert "建议进入录用讨论 / 谨慎推进 / 继续验证 / 不建议推进" in brief_text
+    assert "## 十、已确认个人偏好的影响" in brief_text
     archive = close_candidate(workspace, "AI产品经理", "林晓", "HC暂停，人才保留", reusable=True)
     rebuild_indexes(workspace)
     assert archive.exists()

@@ -18,7 +18,12 @@ class ValidationIssue:
 
 def validate_workspace(root: Path) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
-    required = ["AGENTS.md", "00_公司认知/通用招聘标准.md", "04_全局索引/待确认事项.md"]
+    required = [
+        "AGENTS.md",
+        "00_公司认知/通用招聘标准.md",
+        "00_公司认知/个人招聘判断偏好.md",
+        "04_全局索引/待确认事项.md",
+    ]
     for relative in required:
         if not (root / relative).exists():
             issues.append(ValidationIssue("ERROR", "MISSING_REQUIRED", relative, "缺少必需文件"))
