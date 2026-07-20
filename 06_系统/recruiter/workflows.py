@@ -332,6 +332,8 @@ def ingest_resumes(root: Path) -> list[dict[str, str]]:
                     f"# {name}｜简历分析\n\n## 结论\n\n- AI 建议：待分析\n- 业务摘要：待 Codex 分析。\n\n"
                     "## 与岗位匹配的证据\n\n待分析。\n\n## 主要风险\n\n待分析。\n\n"
                     "## 未验证项\n\n待分析。\n\n## 建议后续验证\n\n待分析。\n\n"
+                    "## 相对位置\n\n待完成同岗位候选人比较。\n\n"
+                    "## 已确认个人偏好的影响\n\n待分析；未经确认的偏好不得使用。\n\n"
                     f"## 输入追溯\n\n- 原始材料：`{moved.relative_to(root)}`\n- SHA-256：`{digest}`\n",
                     encoding="utf-8",
                 )
@@ -446,6 +448,14 @@ def record_resume_analysis(
 ## 建议后续验证
 
 - 围绕主要风险和未验证项追问，不把简历表述直接当作已验证能力。
+
+## 相对位置
+
+- 待在同岗位 `候选人比较.md` 中完成相对排序和取舍说明。
+
+## 已确认个人偏好的影响
+
+- 待 Codex 读取 `00_公司认知/个人招聘判断偏好.md` 后补充；未经确认的偏好不得使用。
 
 ## 输入追溯
 
@@ -568,6 +578,7 @@ def ingest_interviews(root: Path) -> list[dict[str, str]]:
                 report.write_text(
                     f"# {candidate}｜第 {round_no} 轮面试报告\n\n## 面试官评价（忠实提取）\n\n待 Codex 提取。\n\n"
                     "## Codex 独立分析\n\n待分析。\n\n## 证据\n\n待分析。\n\n## 风险与未验证项\n\n待分析。\n\n"
+                    "## 本轮改变了什么\n\n待分析。\n\n## Codex 下一步倾向\n\n待分析。\n\n"
                     "## 人工正式结论\n\n待确认。\n\n## 输入追溯\n\n"
                     f"- 原始纪要：`{raw.relative_to(root)}`\n- SHA-256：`{digest}`\n",
                     encoding="utf-8",
@@ -667,6 +678,16 @@ def record_interview_analysis(
 
 {unverified}
 
+## 本轮改变了什么
+
+- 得到支持的判断：待 Codex 根据本轮前假设和实际回答补充。
+- 被削弱或推翻的判断：待 Codex 补充。
+- 最可能改变下一步倾向的未解决问题：{unverified}
+
+## Codex 下一步倾向
+
+- 待 Codex 基于本轮新增证据明确为推进、继续验证、暂缓或不建议推进，并说明理由。
+
 ## 人工正式结论
 
 待确认。此处不得由 Codex 替代用户写入。
@@ -716,6 +737,7 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
         raise FileNotFoundError("Position or active candidate does not exist")
     overview, _ = read_markdown(overview_file)
     reports = sorted(candidate_dir.glob("02_面试/*/面试报告.md"))
+    preparations = sorted(candidate_dir.glob("02_面试/*/面试准备.md"))
     if not reports:
         raise ValueError("Final brief requires at least one interview report")
     evidence_sections = []
@@ -730,6 +752,10 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
 
 ## 一、结论摘要
 
+- 倾向建议：待 Codex 基于完整材料明确为“建议进入录用讨论 / 谨慎推进 / 继续验证 / 不建议推进”之一
+- 三条决定性理由：待 Codex 补充。
+- 最大下行风险：{overview.get('resume_risk', '未记录')}
+- 最可能改变当前倾向的新证据：{overview.get('resume_unverified', '未记录')}
 - AI 简历建议：{overview.get('ai_recommendation', '未记录')}
 - 人工筛选结论：{overview.get('human_decision', '未记录')}
 - 当前阶段：{overview.get('current_stage', '未记录')}
@@ -772,15 +798,21 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
 
 ## 九、倾向性判断
 
-基于当前材料可继续进入终面核验；是否录用必须由人基于终面新增证据决定。本简报不替代最终录用决定。
+待 Codex 根据全部证据给出清晰倾向。是否录用必须由人基于终面新增证据决定。本简报不替代最终录用决定。
 
-## 十、输入材料清单
+## 十、已确认个人偏好的影响
+
+- 来源：`00_公司认知/个人招聘判断偏好.md`
+- 待 Codex 说明具体使用了哪些已确认偏好；没有适用偏好时明确写“未使用”。
+
+## 十一、输入材料清单
 
 {source_list}
 - `{position_file.relative_to(root)}`
 - `{overview_file.relative_to(root)}`
+{chr(10).join(f'- `{path.relative_to(root)}`' for path in preparations)}
 """
-    brief.write_text(body, encoding="utf-8")
+    brief.write_text(body.rstrip() + "\n", encoding="utf-8")
     update_frontmatter(overview_file, current_stage="终面待进行", updated_at=today(), final_brief=str(brief.relative_to(root)))
     refresh_candidate_overview(overview_file)
     log_action(root, "final_brief.generated", candidate=candidate, position=position, path=str(brief.relative_to(root)))

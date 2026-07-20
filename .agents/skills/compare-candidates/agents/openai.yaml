@@ -1,0 +1,4 @@
+interface:
+  display_name: "候选人比较"
+  short_description: "横向比较同岗候选人，并基于证据给出清晰的优先顺序与取舍"
+  default_prompt: "请使用 $compare-candidates，比较这个岗位的候选人并给出优先顺序。"

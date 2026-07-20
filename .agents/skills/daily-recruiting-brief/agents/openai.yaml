@@ -1,0 +1,4 @@
+interface:
+  display_name: "今日招聘简报"
+  short_description: "汇总当前招聘优先级、待决定事项和最值得采取的下一步行动"
+  default_prompt: "请使用 $daily-recruiting-brief，告诉我今天招聘上最值得关注什么。"
