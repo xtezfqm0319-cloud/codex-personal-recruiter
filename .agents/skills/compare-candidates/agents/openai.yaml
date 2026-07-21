@@ -1,4 +1,4 @@
 interface:
   display_name: "候选人比较"
-  short_description: "横向比较同岗候选人，并基于证据给出清晰的优先顺序与取舍"
-  default_prompt: "请使用 $compare-candidates，比较这个岗位的候选人并给出优先顺序。"
+  short_description: "按岗位证据比较候选人并给出有限名额下的真实取舍"
+  default_prompt: "使用 $compare-candidates 比较这个岗位的候选人；先判断哪些人真正可比，再给出优先组、相邻差异、有限名额名单和可能改变顺序的新证据。"

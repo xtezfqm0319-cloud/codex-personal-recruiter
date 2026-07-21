@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import fitz
 import pytest
 from docx import Document
 from pypdf import PdfWriter
@@ -19,11 +20,15 @@ def test_extract_docx_and_hash(tmp_path: Path) -> None:
     assert len(sha256(path)) == 64
 
 
-def test_extract_baseline_pdf() -> None:
-    project = Path(__file__).resolve().parents[2]
-    path = project / "Codex 个人招聘工作台｜整体架构与技术方案 V1.0.pdf"
+def test_extract_text_pdf(tmp_path: Path) -> None:
+    path = tmp_path / "文本简历.pdf"
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text((72, 72), "Candidate: Alice Chen | Position: AI Product Manager | Experience: product delivery")
+    document.save(path)
+    document.close()
     text = extract_text(path)
-    assert "整体架构与技术方案" in text
+    assert "Alice Chen" in text and "AI Product Manager" in text
 
 
 def test_scanned_pdf_uses_local_ocr_and_reports_quality(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

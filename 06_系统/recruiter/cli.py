@@ -62,6 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
     confirm.add_argument("--position", required=True)
     confirm.add_argument("--candidate", required=True)
     confirm.add_argument("--decision", required=True, choices=["推进", "待定", "淘汰"])
+    confirm.add_argument("--reason", default="", help="explicit human rationale; never inferred from AI analysis")
+    confirm.add_argument(
+        "--confirmed-change",
+        action="store_true",
+        help="execute a previously queued and explicitly reconfirmed human-decision change",
+    )
 
     sub.add_parser("ingest-interviews", help="scan and organize interview-note inbox")
     interview = sub.add_parser("record-interview-analysis", help="record separated interview analysis")
@@ -149,7 +155,14 @@ def main(argv: list[str] | None = None) -> int:
             rebuild_indexes(root)
             _print({"status": "ok", "path": path.relative_to(root)})
         elif args.command == "confirm-screening":
-            path = confirm_screening(root, args.position, args.candidate, args.decision)
+            path = confirm_screening(
+                root,
+                args.position,
+                args.candidate,
+                args.decision,
+                args.reason,
+                args.confirmed_change,
+            )
             rebuild_indexes(root)
             _print({"status": "ok", "path": path.relative_to(root)})
         elif args.command == "ingest-interviews":

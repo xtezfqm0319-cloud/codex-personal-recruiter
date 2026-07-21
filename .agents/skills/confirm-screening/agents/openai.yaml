@@ -1,4 +1,4 @@
 interface:
   display_name: "确认筛选"
-  short_description: "Record confirmed screening decisions without overwrites"
-  default_prompt: "Use $confirm-screening to record my screening decisions."
+  short_description: "准确记录批量人工筛选决定并保留判断理由"
+  default_prompt: "使用 $confirm-screening，根据我刚才的自然语言反馈确认本批候选人的推进、待定或淘汰结论。"
