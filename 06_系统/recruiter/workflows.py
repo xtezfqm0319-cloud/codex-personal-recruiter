@@ -39,7 +39,7 @@ def refresh_candidate_overview(path: Path) -> None:
         f"- 人工结论：{data.get('human_decision', '待确认')}\n"
         f"- 当前流程结论：{data.get('process_status', '推进中')}",
     )
-    body = _replace_section(body, "## 三、简历阶段判断", str(data.get("resume_summary", "待 Codex 分析。")))
+    body = _replace_section(body, "## 三、简历阶段判断", str(data.get("resume_summary", "待 AI 分析。")))
     summaries = data.get("interview_summaries") or []
     interview_text = "\n".join(
         f"- 第{item.get('round')}轮：{item.get('ai_analysis')}（证据：{item.get('evidence')}；未验证：{item.get('unverified')}）"
@@ -111,11 +111,11 @@ def create_position(root: Path, name: str, jd_text: str, source_file: str | None
     }
     profile = profile_text.strip() if profile_text else """### 这个岗位负责什么
 
-待 Codex 与用户校准。
+待 AI 助手与用户校准。
 
 ### 要招什么样的人
 
-待 Codex 与用户校准。
+待 AI 助手与用户校准。
 
 ### 核心能力
 
@@ -167,7 +167,7 @@ def create_position(root: Path, name: str, jd_text: str, source_file: str | None
     for item in matches:
         scan_lines.append(f"- {item['name']}｜原岗位：{item['original_position']}｜结果：{item['final_result']}｜`{item['path']}`")
     if not matches:
-        scan_lines.append("- 暂无关键词命中；Codex 可按岗位画像补充语义检索。")
+        scan_lines.append("- 暂无关键词命中；AI 助手可按岗位画像补充语义检索。")
     (target / "建岗历史人才扫描.md").write_text("\n".join(scan_lines) + "\n", encoding="utf-8")
     return target
 
@@ -227,7 +227,7 @@ def _candidate_overview(root: Path, position: str, name: str, resume: Path, dige
 
 ## 三、简历阶段判断
 
-待 Codex 分析。
+待 AI 分析。
 
 ## 四、历轮面试结论
 
@@ -329,7 +329,7 @@ def ingest_resumes(root: Path) -> list[dict[str, str]]:
             analysis = candidate_dir / "01_简历分析.md"
             if not analysis.exists():
                 analysis.write_text(
-                    f"# {name}｜简历分析\n\n## 结论\n\n- AI 建议：待分析\n- 业务摘要：待 Codex 分析。\n\n"
+                    f"# {name}｜简历分析\n\n## 结论\n\n- AI 建议：待分析\n- 业务摘要：待 AI 分析。\n\n"
                     "## 与岗位匹配的证据\n\n待分析。\n\n## 主要风险\n\n待分析。\n\n"
                     "## 未验证项\n\n待分析。\n\n## 建议后续验证\n\n待分析。\n\n"
                     "## 相对位置\n\n待完成同岗位候选人比较。\n\n"
@@ -455,7 +455,7 @@ def record_resume_analysis(
 
 ## 已确认个人偏好的影响
 
-- 待 Codex 读取 `00_公司认知/个人招聘判断偏好.md` 后补充；未经确认的偏好不得使用。
+- 待 AI 助手读取 `00_公司认知/个人招聘判断偏好.md` 后补充；未经确认的偏好不得使用。
 
 ## 输入追溯
 
@@ -576,9 +576,9 @@ def ingest_interviews(root: Path) -> list[dict[str, str]]:
             report = folder / "面试报告.md"
             if not report.exists():
                 report.write_text(
-                    f"# {candidate}｜第 {round_no} 轮面试报告\n\n## 面试官评价（忠实提取）\n\n待 Codex 提取。\n\n"
-                    "## Codex 独立分析\n\n待分析。\n\n## 证据\n\n待分析。\n\n## 风险与未验证项\n\n待分析。\n\n"
-                    "## 本轮改变了什么\n\n待分析。\n\n## Codex 下一步倾向\n\n待分析。\n\n"
+                    f"# {candidate}｜第 {round_no} 轮面试报告\n\n## 面试官评价（忠实提取）\n\n待 AI 提取。\n\n"
+                    "## AI 独立分析\n\n待分析。\n\n## 证据\n\n待分析。\n\n## 风险与未验证项\n\n待分析。\n\n"
+                    "## 本轮改变了什么\n\n待分析。\n\n## AI 下一步倾向\n\n待分析。\n\n"
                     "## 人工正式结论\n\n待确认。\n\n## 输入追溯\n\n"
                     f"- 原始纪要：`{raw.relative_to(root)}`\n- SHA-256：`{digest}`\n",
                     encoding="utf-8",
@@ -666,7 +666,7 @@ def record_interview_analysis(
 
 {interviewer_evaluation}
 
-## Codex 独立分析
+## AI 独立分析
 
 {ai_analysis}
 
@@ -680,17 +680,17 @@ def record_interview_analysis(
 
 ## 本轮改变了什么
 
-- 得到支持的判断：待 Codex 根据本轮前假设和实际回答补充。
-- 被削弱或推翻的判断：待 Codex 补充。
+- 得到支持的判断：待 AI 助手根据本轮前假设和实际回答补充。
+- 被削弱或推翻的判断：待 AI 助手补充。
 - 最可能改变下一步倾向的未解决问题：{unverified}
 
-## Codex 下一步倾向
+## AI 下一步倾向
 
-- 待 Codex 基于本轮新增证据明确为推进、继续验证、暂缓或不建议推进，并说明理由。
+- 待 AI 助手基于本轮新增证据明确为推进、继续验证、暂缓或不建议推进，并说明理由。
 
 ## 人工正式结论
 
-待确认。此处不得由 Codex 替代用户写入。
+待确认。此处不得由 AI 助手替代用户写入。
 
 ## 输入追溯
 
@@ -752,8 +752,8 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
 
 ## 一、结论摘要
 
-- 倾向建议：待 Codex 基于完整材料明确为“建议进入录用讨论 / 谨慎推进 / 继续验证 / 不建议推进”之一
-- 三条决定性理由：待 Codex 补充。
+- 倾向建议：待 AI 助手基于完整材料明确为“建议进入录用讨论 / 谨慎推进 / 继续验证 / 不建议推进”之一
+- 三条决定性理由：待 AI 助手补充。
 - 最大下行风险：{overview.get('resume_risk', '未记录')}
 - 最可能改变当前倾向的新证据：{overview.get('resume_unverified', '未记录')}
 - AI 简历建议：{overview.get('ai_recommendation', '未记录')}
@@ -772,7 +772,7 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
 
 - 支持证据：{overview.get('resume_evidence', '未记录')}
 - 风险：{overview.get('resume_risk', '未记录')}
-- 说明：这是 Codex 基于现有材料的判断，不是事实或录用结论。
+- 说明：这是 AI 助手基于现有材料的判断，不是事实或录用结论。
 
 ## 四、历轮面试证据
 
@@ -798,12 +798,12 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
 
 ## 九、倾向性判断
 
-待 Codex 根据全部证据给出清晰倾向。是否录用必须由人基于终面新增证据决定。本简报不替代最终录用决定。
+待 AI 助手根据全部证据给出清晰倾向。是否录用必须由人基于终面新增证据决定。本简报不替代最终录用决定。
 
 ## 十、已确认个人偏好的影响
 
 - 来源：`00_公司认知/个人招聘判断偏好.md`
-- 待 Codex 说明具体使用了哪些已确认偏好；没有适用偏好时明确写“未使用”。
+- 待 AI 助手说明具体使用了哪些已确认偏好；没有适用偏好时明确写“未使用”。
 
 ## 十一、输入材料清单
 
@@ -917,11 +917,11 @@ def calibrate_position(root: Path, position: str) -> Path:
 ## 观察
 
 - 当前共有 {len(records)} 个候选人记录，{len(differences)} 个包含可对比的 AI 与人工结论。
-- 应由 Codex 结合原始证据判断分歧更可能来自画像、筛选标准、面试标准或个别案例，不从样本数量直接推导因果。
+- 应由 AI 助手结合原始证据判断分歧更可能来自画像、筛选标准、面试标准或个别案例，不从样本数量直接推导因果。
 
 ## 建议修改
 
-- 待 Codex 基于重复出现的通过、淘汰与分歧原因提出，并展示修改前后差异。
+- 待 AI 助手基于重复出现的通过、淘汰与分歧原因提出，并展示修改前后差异。
 
 ## 权限提示
 

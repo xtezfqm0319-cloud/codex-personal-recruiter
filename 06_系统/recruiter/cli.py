@@ -41,7 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
     command.add_argument("--profile-file", type=Path, help="confirmed Markdown content for the 岗位画像 section")
 
     sub.add_parser("ingest-resumes", help="scan and organize resume inbox")
-    analysis = sub.add_parser("record-resume-analysis", help="record Codex resume judgment")
+    analysis = sub.add_parser("record-resume-analysis", help="record AI resume judgment")
     analysis.add_argument("--position", required=True)
     analysis.add_argument("--candidate", required=True)
     analysis.add_argument("--recommendation", required=True)

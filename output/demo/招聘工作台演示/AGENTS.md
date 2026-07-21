@@ -1,9 +1,9 @@
-# Codex 个人招聘工作台长期规则
+# Codex / Claude Code 个人招聘工作台长期规则
 
 ## 定位与事实来源
 
 - 本项目只服务当前用户和当前公司，是本地个人招聘主档案，不是通用 SaaS。
-- Codex 对话是操作入口；本地文件是正式产物。Markdown 主档案是唯一事实来源，CSV 仅是可重建索引，JSONL 仅是审计记录。
+- Codex 或 Claude Code 对话是操作入口；本地文件是正式产物。Markdown 主档案是唯一事实来源，CSV 仅是可重建索引，JSONL 仅是审计记录。
 - 开始任务前先读取现有公司、岗位、候选人及原始材料；重要结论必须落盘。
 
 ## 工作原则
@@ -47,6 +47,7 @@
 
 ## 执行约定
 
-- 优先使用 `.agents/skills/` 中匹配任务的 Skill。
+- Codex 优先使用 `.agents/skills/`；Claude Code 优先使用同步生成的 `.claude/skills/`。两者必须执行相同的招聘规则和权限边界。
+- `.agents/skills/` 是唯一 Skill 维护源；修改后必须运行 `python scripts/sync_agent_skills.py --root .` 并用 `--check` 校验 Claude Code 副本。
 - Python 命令统一从项目根目录运行：`python -m recruiter --root . <command>`。
 - 每次有状态变化后重建索引并运行相关校验；错误不得静默忽略。

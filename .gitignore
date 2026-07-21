@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.DS_Store
+.claude/settings.local.json
 06_系统/cache/*
 !06_系统/cache/.gitkeep
 01_待处理/简历/*

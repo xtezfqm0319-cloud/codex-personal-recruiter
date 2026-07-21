@@ -65,9 +65,11 @@ def validate_workspace(root: Path) -> list[ValidationIssue]:
         if not raw:
             issues.append(ValidationIssue("ERROR", "MISSING_INTERVIEW_RAW", str(report.relative_to(root)), "面试报告缺少原始纪要"))
         text = report.read_text(encoding="utf-8")
-        for heading in ("## 面试官评价（忠实提取）", "## Codex 独立分析", "## 人工正式结论", "## 输入追溯"):
+        for heading in ("## 面试官评价（忠实提取）", "## 人工正式结论", "## 输入追溯"):
             if heading not in text:
                 issues.append(ValidationIssue("ERROR", "INTERVIEW_STRUCTURE", str(report.relative_to(root)), f"缺少分层字段：{heading}"))
+        if "## AI 独立分析" not in text and "## Codex 独立分析" not in text:
+            issues.append(ValidationIssue("ERROR", "INTERVIEW_STRUCTURE", str(report.relative_to(root)), "缺少分层字段：## AI 独立分析"))
 
     index = root / "04_全局索引" / "全部候选人.csv"
     if index.exists():

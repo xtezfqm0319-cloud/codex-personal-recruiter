@@ -86,7 +86,7 @@ def main() -> int:
         "查找时长下降缺少统一数据口径；候选人在算法取舍中的最终决策权待核验。",
     )
     set_interview_decision(root, "企业AI产品经理", "陈曦", 1, "通过，进入终面")
-    steps.append("分析第1轮面试：原始纪要、面试官评价、Codex分析、人工结论分层保存")
+    steps.append("分析第1轮面试：原始纪要、面试官评价、AI分析、人工结论分层保存")
 
     brief = generate_final_brief(root, "企业AI产品经理", "陈曦", "HR补充：到岗周期约4周；薪资期望在当前预算范围内，尚未最终确认。")
     steps.append(f"生成终面简报：{brief.relative_to(root)}")
@@ -106,7 +106,7 @@ def main() -> int:
         + "\n".join(f"{idx}. {step}" for idx, step in enumerate(steps, 1))
         + f"\n\n## 校验\n\n- 错误：{len(errors)}\n- 警告：{len([i for i in issues if i.level == 'WARNING'])}\n"
         + ("\n".join(f"- {i.level} {i.code}: {i.path} - {i.message}" for i in issues) or "- 工作区校验通过。")
-        + "\n\n## 说明\n\n- 所有材料均为脱敏模拟数据。\n- 演示中的开放式业务判断由脚本显式传入，模拟 Codex 按 Skills 生成后调用 `record-*` 落盘；Python 本身没有调用模型。\n",
+        + "\n\n## 说明\n\n- 所有材料均为脱敏模拟数据。\n- 演示中的开放式业务判断由脚本显式传入，模拟 AI 助手按 Skills 生成后调用 `record-*` 落盘；Python 本身没有调用模型。\n",
         encoding="utf-8",
     )
     print(result)
