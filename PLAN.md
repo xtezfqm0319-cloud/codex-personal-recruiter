@@ -81,3 +81,14 @@
 - [x] 完成 Skill 校验、全量测试和端到端演示复验。
 
 验收：用户可以只用自然语言完成“今天先做什么、候选人怎么排、下一轮问什么、最终是否值得推进”四类高频判断；所有结论仍可追溯到本地主档案。
+
+## V0.4 Codex / Claude Code 双端兼容｜2026-07-21
+
+- [x] 新增 `CLAUDE.md` 并复用 `AGENTS.md` 长期规则。
+- [x] 生成 Claude Code 原生可发现的 `.claude/skills/`。
+- [x] 建立单一 Skill 维护源和双端同步校验。
+- [x] 将新生成报告中的助手名称改为中性的“AI”。
+- [x] 更新双端安装、使用、订阅登录与显式 Skill 调用说明。
+- [x] 运行全部 Skills 校验、自动化测试和端到端演示复验。
+
+验收：Codex 可从 `.agents/skills/` 工作，Claude Code 可从 `.claude/skills/` 工作；两端使用相同本地主档案和 Python CLI，Skill 内容不会静默漂移。
