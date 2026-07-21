@@ -109,31 +109,55 @@ def create_position(root: Path, name: str, jd_text: str, source_file: str | None
         "image_version": 1,
         "source_files": [source_file] if source_file else [],
     }
-    profile = profile_text.strip() if profile_text else """### 这个岗位负责什么
+    profile = profile_text.strip() if profile_text else """### 岗位任务与预期结果
 
 待 AI 助手与用户校准。
 
-### 要招什么样的人
+### 目标候选人类型
 
 待 AI 助手与用户校准。
 
-### 核心能力
+### 一票否决条件
 
 待校准。
 
-### 关键经历
+### 能力底线
 
 待校准。
 
-### 简历筛选重点
+### 决定性排序因素
 
 待校准。
 
-### 面试重点判断
+### 加分项与风险信号
+
+待校准。
+
+### 取舍与经历替代规则
+
+待校准。
+
+### 关键经历和证据标准
+
+待校准。
+
+### 简历筛选规则
+
+待校准。
+
+### 面试重点验证
+
+待校准。
+
+### 现场任务建议
 
 待校准。
 
 ### 可放宽条件
+
+待校准。
+
+### 已确认事实、工作假设、矛盾项与未验证项
 
 待校准。"""
     body = f"""# {name}

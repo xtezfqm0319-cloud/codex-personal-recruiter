@@ -1,4 +1,4 @@
 interface:
   display_name: "创建岗位"
-  short_description: "Discuss and create a calibrated recruiting position"
-  default_prompt: "Use $create-position to discuss this JD and create a position after my confirmation."
+  short_description: "把JD转成可执行的选人、排序、证据和面试验证规则"
+  default_prompt: "使用 $create-position 把这份 JD 转成有证据标准的选人决策模型；先给出你的初步判断，每轮最多问三个真正影响选人结果的问题，并在我确认后再创建正式岗位。"

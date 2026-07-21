@@ -49,5 +49,6 @@
 
 - Codex 优先使用 `.agents/skills/`；Claude Code 优先使用同步生成的 `.claude/skills/`。两者必须执行相同的招聘规则和权限边界。
 - `.agents/skills/` 是唯一 Skill 维护源；修改后必须运行 `python scripts/sync_agent_skills.py --root .` 并用 `--check` 校验 Claude Code 副本。
+- 招聘业务 Skills 的正文默认使用中文；Skill 名、文件路径、字段名和 CLI 命令可保留英文。逐环节优化提示词时，向用户提供修改前与修改后的完整提示词，便于直接比较。
 - Python 命令统一从项目根目录运行：`python -m recruiter --root . <command>`。
 - 每次有状态变化后重建索引并运行相关校验；错误不得静默忽略。
