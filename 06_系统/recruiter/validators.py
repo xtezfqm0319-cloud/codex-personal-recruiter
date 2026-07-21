@@ -52,11 +52,11 @@ def validate_workspace(root: Path) -> list[ValidationIssue]:
                 elif item.get("sha256") and sha256(source_path) != item.get("sha256"):
                     issues.append(ValidationIssue("ERROR", "SOURCE_HASH_MISMATCH", str(overview.relative_to(root)), f"原始材料哈希不一致：{item.get('path')}"))
         recommendation = data.get("ai_recommendation")
-        tier = data.get("education_tier")
-        if recommendation in {"强推", "推"} and tier not in {"985", "211"}:
-            issues.append(ValidationIssue("ERROR", "EDUCATION_RULE", str(overview.relative_to(root)), "非985/211或未验证学历被建议推进"))
-        if recommendation in {"强推", "推"} and tier == "211" and not str(data.get("exception_reason", "")).strip():
-            issues.append(ValidationIssue("ERROR", "MISSING_EXCEPTION", str(overview.relative_to(root)), "211推进缺少破格理由"))
+        constraint_status = data.get("hard_constraint_status", "未验证")
+        if recommendation in {"强推", "推"} and constraint_status == "不符合":
+            issues.append(ValidationIssue("ERROR", "HARD_CONSTRAINT_RULE", str(overview.relative_to(root)), "候选人明确不符合已确认硬性条件但仍被建议推进"))
+        if recommendation in {"强推", "推"} and constraint_status == "存在经确认例外" and not str(data.get("exception_reason", "")).strip():
+            issues.append(ValidationIssue("ERROR", "MISSING_EXCEPTION", str(overview.relative_to(root)), "硬性条件例外缺少具体理由"))
         if recommendation not in {None, "", "待分析"} and not str(data.get("resume_evidence", "")).strip():
             issues.append(ValidationIssue("ERROR", "MISSING_EVIDENCE", str(overview.relative_to(root)), "AI简历判断缺少证据"))
 

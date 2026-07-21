@@ -21,7 +21,7 @@ from .frontmatter import read_markdown, update_frontmatter, write_markdown
 
 
 RECOMMENDATIONS = ("强推", "推", "建议待定", "建议淘汰")
-ELITE_TIERS = ("985", "211")
+HARD_CONSTRAINT_STATUSES = ("符合", "存在经确认例外", "不符合", "未验证", "不适用")
 
 
 def _replace_section(body: str, heading: str, content: str) -> str:
@@ -230,7 +230,7 @@ def _candidate_overview(root: Path, position: str, name: str, resume: Path, dige
         "human_decision": "待确认",
         "process_status": "推进中",
         "reusable": False,
-        "education_tier": "未验证",
+        "hard_constraint_status": "未验证",
         "created_at": today(),
         "updated_at": today(),
         "source_files": [{"path": str(resume.relative_to(root)), "sha256": digest}],
@@ -263,7 +263,7 @@ def _candidate_overview(root: Path, position: str, name: str, resume: Path, dige
 
 ## 六、当前风险与未验证项
 
-- 学历与其他硬性条件待核验。
+- 岗位硬性条件和其他关键事实待核验。
 
 ## 七、重要变更记录
 
@@ -422,8 +422,10 @@ def record_resume_analysis(
     evidence: str,
     risk: str,
     unverified: str,
-    education_tier: str,
+    hard_constraint_status: str,
     exception_reason: str = "",
+    verification: str = "",
+    preference_impact: str = "",
 ) -> Path:
     if recommendation not in RECOMMENDATIONS:
         raise ValueError(f"Recommendation must be one of: {', '.join(RECOMMENDATIONS)}")
@@ -441,10 +443,12 @@ def record_resume_analysis(
             "复核新版材料；保持人工结论不变，确认后再更新 AI 建议",
         )
         raise PermissionError("Queued pending confirmation instead of changing an analyzed confirmed candidate")
-    if education_tier not in ELITE_TIERS and recommendation in {"强推", "推"}:
-        raise ValueError("Non-985/211 or unverified education cannot be recommended as 强推/推")
-    if education_tier == "211" and recommendation in {"强推", "推"} and not exception_reason.strip():
-        raise ValueError("211 exception requires a concrete exception reason")
+    if hard_constraint_status not in HARD_CONSTRAINT_STATUSES:
+        raise ValueError(f"Hard constraint status must be one of: {', '.join(HARD_CONSTRAINT_STATUSES)}")
+    if hard_constraint_status == "不符合" and recommendation in {"强推", "推"}:
+        raise ValueError("A candidate who fails a confirmed hard constraint cannot be recommended as 强推/推")
+    if hard_constraint_status == "存在经确认例外" and recommendation in {"强推", "推"} and not exception_reason.strip():
+        raise ValueError("A confirmed hard-constraint exception requires a concrete reason")
     candidate_dir = overview.parent
     sources = data.get("source_files") or []
     trace = "\n".join(f"- `{item.get('path')}`｜SHA-256 `{item.get('sha256')}`" for item in sources if isinstance(item, dict))
@@ -454,8 +458,8 @@ def record_resume_analysis(
 
 - AI 建议：{recommendation}
 - 业务摘要：{summary}
-- 学历核验：{education_tier}
-{f'- 211 破格理由：{exception_reason}' if exception_reason else ''}
+- 硬性条件核验：{hard_constraint_status}
+{f'- 例外理由：{exception_reason}' if exception_reason else ''}
 
 ## 与岗位匹配的证据
 
@@ -471,7 +475,7 @@ def record_resume_analysis(
 
 ## 建议后续验证
 
-- 围绕主要风险和未验证项追问，不把简历表述直接当作已验证能力。
+{verification.strip() or '- 围绕主要风险和未验证项追问，不把简历表述直接当作已验证能力。'}
 
 ## 相对位置
 
@@ -479,7 +483,7 @@ def record_resume_analysis(
 
 ## 已确认个人偏好的影响
 
-- 待 AI 助手读取 `00_公司认知/个人招聘判断偏好.md` 后补充；未经确认的偏好不得使用。
+{preference_impact.strip() or '- 未使用个人偏好，仅按岗位画像和证据判断。'}
 
 ## 输入追溯
 
@@ -490,12 +494,14 @@ def record_resume_analysis(
     update_frontmatter(
         overview,
         ai_recommendation=recommendation,
-        education_tier=education_tier,
+        hard_constraint_status=hard_constraint_status,
         updated_at=today(),
         resume_summary=summary,
         resume_evidence=evidence,
         resume_risk=risk,
         resume_unverified=unverified,
+        resume_verification=verification,
+        preference_impact=preference_impact,
         exception_reason=exception_reason,
     )
     refresh_candidate_overview(overview)
@@ -789,7 +795,7 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
 
 - 候选人：{candidate}
 - 岗位：{position}
-- 学历材料记录：{overview.get('education_tier', '未验证')}（该字段不等于背调或证明材料已确认）
+- 硬性条件记录：{overview.get('hard_constraint_status', '未验证')}（该字段只表示当前材料判断，不等于后续核验已完成）
 - 以上状态来自：`{overview_file.relative_to(root)}`；岗位标准来自：`{position_file.relative_to(root)}`。
 
 ## 三、岗位匹配判断
@@ -818,7 +824,7 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
 ## 八、终面建议验证问题
 
 - 请围绕关键经历的个人职责、决策依据、可量化结果和复盘追问。
-- 请验证材料中尚未确认的学历、年限、团队规模和业绩归因。
+- 请验证材料中尚未确认的任职时间、责任边界、团队规模和业绩归因。
 
 ## 九、倾向性判断
 

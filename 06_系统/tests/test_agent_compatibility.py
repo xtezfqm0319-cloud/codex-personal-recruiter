@@ -48,4 +48,21 @@ def test_create_position_has_detailed_chinese_contract() -> None:
         assert heading in reference
 
 
+def test_process_resumes_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/process-resumes/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/process-resumes/references/简历筛选判断与输出规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+
+    assert "[简历筛选判断与输出规范.md](references/简历筛选判断与输出规范.md)" in skill
+    assert "第一遍：逐份建立证据判断" in skill
+    assert "第二遍：岗位内统一比较" in skill
+    for heading in (
+        "## 3. 两遍判断流程",
+        "## 6. 四档建议的完整边界",
+        "## 10. 岗位内排序与面试容量",
+        "## 15. 写入前自检",
+    ):
+        assert heading in reference
+
+
 SKILL_REFERENCE_PATTERN = re.compile(r"\$[a-z][a-z0-9-]*")

@@ -1,4 +1,4 @@
 interface:
   display_name: "处理简历"
-  short_description: "Process resumes with traceable four-tier recommendations"
-  default_prompt: "Use $process-resumes to process the resumes in the inbox."
+  short_description: "按岗位证据筛选、排序简历并生成批量确认结论"
+  default_prompt: "使用 $process-resumes 处理待处理区的简历；按正式岗位画像逐项核对证据，给出四档建议和岗位内排序，并把需要我确认的决定集中列出来。"

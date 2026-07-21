@@ -1,15 +1,77 @@
 ---
 name: process-resumes
-description: Process new local resumes into position candidate records with traceable four-tier recommendations. Use when asked to scan, organize, screen, summarize, rank, or prepare a batch confirmation for resumes in the inbox.
+description: 扫描并整理本地待处理简历，依据正式岗位画像建立逐项证据映射，生成“强推、推、建议待定、建议淘汰”四档建议、业务摘要、岗位内相对排序和批量确认汇总。适用于处理简历收件箱、筛选新简历、判断候选人与岗位的匹配度、比较同岗位候选人、确定优先面试顺序，或准备人工批量确认。
 ---
 
-# Process Resumes
+# 处理简历
 
-1. Read `AGENTS.md`, company standards, `00_公司认知/个人招聘判断偏好.md`, each target `岗位.md`, and all files in `01_待处理/简历/`.
-2. Run `python -m recruiter --root . ingest-resumes`. Do not guess ambiguous names or positions; inspect `待确认事项.md`.
-3. For every successfully ingested resume, read the original extraction, its SHA-256 trace, and the position profile. Analyze role-relevant evidence, ownership, result strength, risks, unverified items, education policy, and applicable confirmed personal preferences.
-4. Use only `强推`, `推`, `建议待定`, or `建议淘汰`; never assign scores. A 211 recommendation requires a concrete exception reason. Non-985/211 or unverified education defaults to `建议淘汰`.
-5. Record each judgment with `record-resume-analysis`; never overwrite the original resume.
-6. Run `rebuild-index`, then apply `/compare-candidates` for each affected position. Write a real relative ordering, including why adjacent candidates differ and whom to prioritize if interview capacity is limited.
-7. Update `本批次待人工确认.md` with concise business summaries and proposed decisions. In conversation, lead with the top candidates, the hardest trade-off, and the smallest set of decisions needed from the user.
-8. Stop before writing human decisions. Ask the user to confirm the batch; use `/confirm-screening` afterward. Do not explain routine file operations unless something failed.
+## 目标
+
+不要只总结简历或匹配关键词。把每份简历放进正式岗位的选人决策模型中，判断候选人是否值得占用下一步招聘资源、为什么、主要不确定性是什么，以及在同岗位候选人中应排在哪里。
+
+## 读取规则
+
+1. 完整读取 [简历筛选判断与输出规范.md](references/简历筛选判断与输出规范.md)，严格使用其中的证据口径、四档边界、两遍判断流程、排序规则和写入前自检。
+2. 读取 `AGENTS.md`、`00_公司认知/通用招聘标准.md`、`00_公司认知/个人招聘判断偏好.md`、每个目标岗位的正式 `岗位.md`，以及 `01_待处理/简历/` 中的全部文件。
+3. 只使用已确认的岗位标准和个人招聘偏好。待校准岗位规则必须标明不确定性，不得擅自补成正式门槛。
+4. 分清原始文件、提取文本和 AI 判断。原始简历不可覆盖；每个结论必须能追溯到本地来源路径和 SHA-256。
+
+## 扫描与建档
+
+1. 运行 `python -m recruiter --root . ingest-resumes`，让脚本完成读取、OCR、文本完整度检测、姓名与岗位识别、移动、重命名和建档。
+2. 检查命令结果、`原始简历提取质量.md` 和 `04_全局索引/待确认事项.md`：
+   - 文本完整度不足，或姓名、岗位无法唯一识别时，不做实质筛选；
+   - 文件已经进入待确认区时，只向用户说明最少的确认事项；
+   - 不根据模糊文件名、相似岗位或零散文字猜测候选人归属；
+   - OCR 已通过但存在局部低置信度时，只对可读内容下结论，并把可能影响判断的缺失标为未验证。
+3. 对每位成功建档的候选人，读取原始简历提取文本、质量报告、候选人总览中的来源与 SHA-256，以及目标岗位的完整选人规则。
+
+## 第一遍：逐份建立证据判断
+
+1. 按岗位画像逐项判断：一票否决条件、能力底线、决定性排序因素、加分项、风险信号和可放宽条件。不得把所有要求平铺成关键词清单。
+2. 对每个决定性标准记录：材料事实、证据强度、AI 判断和未验证项。区分“明确不符合”与“简历没有提供证据”。
+3. 优先判断本人实际承担的任务、关键动作、责任边界、工作复杂度和结果；“参与过”、工具名称、公司品牌、职位名称和自我评价只能作为线索。
+4. 应用岗位画像中的取舍与经历替代规则。替代经历只有达到画像规定的强证据标准时，才能弥补常见背景缺失。
+5. 应用已确认的公司与岗位硬性条件：
+   - 公开版本不预设任何具体淘汰门槛，只执行 `通用招聘标准.md` 或正式 `岗位.md` 中已经确认的条件；
+   - 材料信息缺失时写“未验证”，不得伪装成已符合或明确不符合；
+   - 明确不符合硬性条件时不得用其他优势静默覆盖；
+   - 用户确认例外时，写明与岗位结果直接相关的具体理由和适用边界。
+6. 先形成临时四档建议，不使用分数：
+   - `强推`：硬门槛与能力底线清楚满足，决定性排序因素有多项强证据，主要风险有限且可控，值得优先占用面试名额；
+   - `推`：准入与底线满足，至少一个决定性因素有强证据，其他核心项达到可推进水平，风险可通过面试有效验证；
+   - `建议待定`：没有明确硬伤，但决定性证据不足、材料矛盾或关键事实缺失，补充少量特定信息后可能改变是否推进；
+   - `建议淘汰`：明确不满足一票否决或关键底线，或与岗位结果直接相关的证据整体过弱，继续投入面试的预期价值低。
+7. `建议待定` 不是礼貌性淘汰。如果不能说清楚“补充哪条证据会让结论转为推或淘汰”，应直接给出更明确的建议。
+8. 为每位候选人生成简洁业务摘要：先说是否值得推进，再说最关键的岗位相关证据、最大风险，以及什么新证据最可能改变当前结论。不要按时间顺序复述整份简历。
+
+## 第二遍：岗位内统一比较
+
+1. 完成同一岗位本批次所有逐份判断后，再运行岗位内相对比较。默认比较处于相同筛选阶段的候选人；证据阶段不同必须明确说明不可直接比较的部分。
+2. 先按四档区分，再在档内根据决定性排序因素、证据强度、任务复杂度、个人贡献清晰度、未解决风险和已确认个人偏好排序。不得按关键词数量、简历长度、公司名气或其他背景标签简单排序。
+3. `强推` 必须同时满足绝对标准和相对突出，不因需要“凑一个第一名”而产生；也不设固定名额，多名候选人确实突出时可以同时强推。
+4. 解释每一组相邻候选人的关键差异：为什么前者更值得先面试，后者需要什么证据才可能反超。
+5. 当面试容量有限时，直接给出“如果只能约 N 人”的优先名单和放弃下一位的实际代价。
+6. 如果相对比较改变了尚未人工确认的 AI 建议，更新 AI 分析并保留新的证据理由；不得改动人工正式结论。
+7. 使用 `/compare-candidates` 将最终排序和两两差异写入 `02_岗位/<岗位>/候选人比较.md`。
+
+## 落盘与人工确认
+
+1. 对每位候选人运行 `python -m recruiter --root . record-resume-analysis`，写入候选人的建议、业务摘要、岗位证据、风险、未验证项、硬性条件状态和必要的例外理由；使用 `--verification` 保存候选人专属验证问题，使用 `--preference-impact` 保存本次实际采用的已确认个人偏好。不得覆盖原始简历。
+2. 运行 `python -m recruiter --root . rebuild-index`，确保 `候选人总表.md` 和 `本批次待人工确认.md` 从候选人主档案重建。
+3. 运行 `python -m recruiter --root . validate`。有错误时先修复，不得静默跳过。
+4. 对话中先给：
+   - 本批次最值得优先看的候选人；
+   - 最难取舍的一组及决定性差异；
+   - 明显不建议继续投入的人及原因；
+   - 只需要用户决定的最小确认集合。
+5. 停在人工结论写入之前。请用户确认每位候选人的“推进、待定或淘汰”；确认后再使用 `/confirm-screening`。不得把 AI 建议写成人工结论。
+6. 除非文件识别、OCR、校验或权限动作失败，不展开移动、重命名、索引等例行内部过程。
+
+## 输出底线
+
+- 只使用 `强推`、`推`、`建议待定`、`建议淘汰`，不使用分数、百分比或伪精确权重。
+- 材料没有写不等于候选人不会；明确区分事实、判断、未验证和冲突。
+- 结论必须针对当前岗位，不能用“整体优秀”“背景不错”代替岗位判断。
+- 既说明支持推进的证据，也主动寻找可能推翻当前倾向的证据。
+- 业务摘要应让用户不打开原简历也能完成第一轮批量决策，但不得夸大材料没有证明的能力。
