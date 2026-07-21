@@ -101,6 +101,55 @@ def test_human_decision_cannot_be_overwritten(workspace: Path) -> None:
     assert data["human_decision"] == "推进"
 
 
+def test_human_reason_and_confirmed_decision_change_are_traceable(workspace: Path) -> None:
+    add_position_and_resume(workspace)
+    ingest_resumes(workspace)
+    record_resume_analysis(workspace, "AI产品经理", "林晓", "推", "摘要", "证据", "风险", "未知", "符合")
+    overview = confirm_screening(workspace, "AI产品经理", "林晓", "推进", "用户认为项目闭环证据值得面试验证")
+    data, body = read_markdown(overview)
+    assert data["human_decision_reason"] == "用户认为项目闭环证据值得面试验证"
+    assert "人工结论理由：用户认为项目闭环证据值得面试验证" in body
+
+    with pytest.raises(PermissionError):
+        confirm_screening(workspace, "AI产品经理", "林晓", "待定", "用户希望先比较同岗位其他候选人")
+    pending = (workspace / "04_全局索引" / "待确认事项.md").read_text(encoding="utf-8")
+    assert "当前人工结论为“推进”，拟改为“待定”" in pending
+
+    confirm_screening(
+        workspace,
+        "AI产品经理",
+        "林晓",
+        "待定",
+        "用户希望先比较同岗位其他候选人",
+        confirmed_change=True,
+    )
+    data, body = read_markdown(overview)
+    assert data["human_decision"] == "待定"
+    assert data["human_decision_reason"] == "用户希望先比较同岗位其他候选人"
+    assert "状态：已确认并执行" in (workspace / "04_全局索引" / "待确认事项.md").read_text(encoding="utf-8")
+    assert "人工结论理由：用户希望先比较同岗位其他候选人" in body
+
+
+def test_confirmed_decision_change_requires_a_matching_pending_item(workspace: Path) -> None:
+    add_position_and_resume(workspace)
+    ingest_resumes(workspace)
+    confirm_screening(workspace, "AI产品经理", "林晓", "推进")
+    with pytest.raises(PermissionError, match="No matching pending"):
+        confirm_screening(workspace, "AI产品经理", "林晓", "待定", confirmed_change=True)
+
+
+def test_confirmed_decision_change_must_match_the_queued_target(workspace: Path) -> None:
+    add_position_and_resume(workspace)
+    ingest_resumes(workspace)
+    confirm_screening(workspace, "AI产品经理", "林晓", "推进")
+    with pytest.raises(PermissionError):
+        confirm_screening(workspace, "AI产品经理", "林晓", "待定")
+    with pytest.raises(PermissionError, match="No matching pending"):
+        confirm_screening(workspace, "AI产品经理", "林晓", "淘汰", confirmed_change=True)
+    data, _ = read_markdown(workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "00_候选人总览.md")
+    assert data["human_decision"] == "推进"
+
+
 def test_full_interview_brief_archive_and_history(workspace: Path) -> None:
     add_position_and_resume(workspace)
     ingest_resumes(workspace)

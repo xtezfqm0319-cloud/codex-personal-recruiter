@@ -1,13 +1,102 @@
 ---
 name: confirm-screening
-description: Record explicit human screening decisions while preserving separate AI recommendations, then advance, hold, or archive candidates. Use after the user confirms a resume batch or gives candidate-by-candidate screening decisions.
+description: 将用户对简历筛选结果的自然语言反馈准确映射为“推进、待定、淘汰”三类人工正式结论，支持按姓名、排序、分组、例外和批量范围确认，同时保留 AI 建议、人工理由与分歧。适用于用户确认一批简历、说“前两个推进，其余淘汰”、逐人给结论、补充筛选理由，或明确确认修改已有人工结论。
 ---
 
-# Confirm Screening
+# 人工筛选确认
 
-1. Read the position batch summary and candidate overviews. Map only explicit user decisions to `推进`, `待定`, or `淘汰`; ask if a reference such as “the third one” is ambiguous.
-2. Run `confirm-screening` once per candidate. First-time decisions are authorized by the user's instruction; changing an existing human decision must enter `待确认事项.md`.
-3. Keep advanced and held candidates active. The CLI archives initial-screen rejects and leaves a short position index.
-4. Preserve `ai_recommendation` even when it differs from `human_decision`.
-5. If the user explains why they disagree with a recommendation or states a reusable principle, apply `$learn-recruiting-preferences`. Do not infer a permanent preference from the decision alone.
-6. Run `rebuild-index` and `validate`, then report who advances, who is held or archived, and any decision that still needs clarification. Do not narrate routine command execution.
+## 目标
+
+把用户已经表达清楚的筛选决定准确落盘，让用户用自然语言批量处理候选人，而不需要逐个重复命令。
+
+本环节只记录用户的正式决定，不替用户重新筛选，不用 AI 建议覆盖人工结论，也不把普通评价、比较或犹豫擅自升级为正式决定。
+
+执行本 Skill 时，必须读取并遵守 [人工筛选确认判断与执行规范](references/人工筛选确认判断与执行规范.md)。
+
+## 必读材料
+
+按需读取以下文件，且以当前主档案为准：
+
+1. `AGENTS.md`；
+2. `00_公司认知/个人招聘判断偏好.md`；
+3. 对应岗位的 `本批次待人工确认.md`；
+4. 对应岗位的 `候选人比较.md`，若用户引用排名、前后顺序或有限名额；
+5. 涉及候选人的 `00_候选人总览.md` 与 `01_简历分析.md`；
+6. `04_全局索引/待确认事项.md`，若用户在确认已有结论变更。
+
+不要只根据对话记忆解释“第一个”“前两个”“其余”或“这些人”。必须找到本轮引用的明确名单，并核对顺序、范围和当前人工结论。
+
+## 决策边界
+
+正式人工结论只允许：
+
+- `推进`：继续投入招聘流程，通常进入待安排面试；
+- `待定`：暂不淘汰，也不立即推进，保留在当前岗位等待比较、补充材料或后续决定；
+- `淘汰`：结束本岗位的初筛流程并归档。
+
+AI 的四档建议与人工三类结论是两套字段。无论是否一致，都必须保留原 `ai_recommendation`。
+
+“更喜欢 A”“B 比较弱”“这几个人一般”“先看前两个”可能只是评价、排序或资源安排，不一定等于完整的正式结论。只有用户明确表达候选人的处理动作时才落盘。
+
+## 自然语言解析
+
+先把用户的话解析为“候选人 → 决定 → 用户明确给出的理由”映射，再执行。
+
+支持：
+
+- 按姓名：如“张三推进，李四待定”；
+- 按当前名单顺序：如“前两个推进，第三个待定，其余淘汰”；
+- 按 AI 建议分组：如“强推和推的都推进，待定先放着”；
+- 按集合加例外：如“除了王五，其余都推进”；
+- 按上下文代词：如“这三个先约面”，但前提是“这三个”的唯一指向可核验；
+- 带理由：如“李四淘汰，核心项目只是参与，没有独立负责证据”。
+
+若一个表达存在两种合理解释，例如有多份排序文件、批次范围不明、姓名重名，或英文 `pass` 可能表示通过也可能表示淘汰，只澄清受影响的最小部分，不猜测。
+
+## 执行原则
+
+1. 首次人工结论若对象、范围和动作都唯一明确，直接执行，不重复要求用户确认。
+2. 批量表达必须先在内部展开为逐人映射；只对本轮明确覆盖的人执行，未提及者继续保持 `待确认`。
+3. 用户给出筛选理由时，通过 `--reason` 原意记录；没有理由时不得补写或猜测。
+4. 对每位候选人调用一次：
+   `python -m recruiter --root . confirm-screening --position "岗位" --candidate "姓名" --decision "推进|待定|淘汰" [--reason "用户明确理由"]`
+5. 若某候选人已有不同的人工结论，第一次变更请求只生成待确认事项，不覆盖原结论。
+6. 只有用户随后明确确认该候选人的具体变更，才使用 `--confirmed-change` 执行；不得把“好的”“照办”关联到不唯一或已变化的待确认项。
+7. 已归档候选人不得通过本 Skill 自动恢复；需要恢复或跨岗位移动时，按权限规则另行生成待确认事项。
+8. 淘汰会结束当前岗位初筛并归档；不要删除原始简历。
+
+## 人工理由与个人偏好
+
+人工理由是“用户为什么这样决定”，不是已验证事实。记录时保持归因，不把用户的主观看法改写成候选人的客观属性。
+
+一次候选人决定或一次分歧默认只属于个案。只有用户明确说“以后”“这类岗位都这样看”“记住这个标准”等可复用规则时，才调用 `$learn-recruiting-preferences`；仍需按该 Skill 的确认流程处理，不能自动写入正式个人偏好。
+
+## 完成与汇报
+
+状态变化后运行：
+
+```bash
+python -m recruiter --root . rebuild-index
+python -m recruiter --root . validate
+```
+
+最终只汇报业务结果：
+
+- 谁推进；
+- 谁待定；
+- 谁淘汰并已归档；
+- 哪些人仍未确认；
+- 哪些已有结论变更正在等待用户确认；
+- AI 建议与人工结论存在的关键分歧，以及用户已明确给出的理由。
+
+不要展开例行命令、移动和索引过程。若全部映射清楚并已执行，不再追问。
+
+## 写入前自检
+
+- “前两个”“其余”“这些人”的来源名单是否唯一且仍为最新？
+- 是否把评价、比较、面试顺序误当成正式结论？
+- 是否只更新了用户明确覆盖的候选人？
+- AI 建议是否保持原样？
+- 人工理由是否来自用户，而不是 AI 补写？
+- 已有人工结论的变更是否经过待确认与再次明确确认？
+- 淘汰归档后，索引和校验是否正常？

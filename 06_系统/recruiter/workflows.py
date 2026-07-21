@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import Iterable
 
-from .audit import add_pending, log_action, today
+from .audit import add_pending, log_action, resolve_pending, today
 from .files import (
     SUPPORTED,
     TextExtractionIncompleteError,
@@ -31,12 +31,15 @@ def _replace_section(body: str, heading: str, content: str) -> str:
 
 def refresh_candidate_overview(path: Path) -> None:
     data, body = read_markdown(path)
+    human_reason = str(data.get("human_decision_reason", "")).strip()
+    reason_line = f"\n- 人工结论理由：{human_reason}" if human_reason else ""
     body = _replace_section(
         body,
         "## 一、当前状态",
         f"- 当前轮次：{data.get('current_stage', '未记录')}\n"
         f"- AI建议：{data.get('ai_recommendation', '待分析')}\n"
-        f"- 人工结论：{data.get('human_decision', '待确认')}\n"
+        f"- 人工结论：{data.get('human_decision', '待确认')}"
+        f"{reason_line}\n"
         f"- 当前流程结论：{data.get('process_status', '推进中')}",
     )
     body = _replace_section(body, "## 三、简历阶段判断", str(data.get("resume_summary", "待 AI 分析。")))
@@ -228,6 +231,7 @@ def _candidate_overview(root: Path, position: str, name: str, resume: Path, dige
         "current_stage": "待业务筛选",
         "ai_recommendation": "待分析",
         "human_decision": "待确认",
+        "human_decision_reason": "",
         "process_status": "推进中",
         "reusable": False,
         "hard_constraint_status": "未验证",
@@ -509,7 +513,14 @@ def record_resume_analysis(
     return path
 
 
-def confirm_screening(root: Path, position: str, candidate: str, decision: str) -> Path:
+def confirm_screening(
+    root: Path,
+    position: str,
+    candidate: str,
+    decision: str,
+    reason: str = "",
+    confirmed_change: bool = False,
+) -> Path:
     allowed = {"推进", "待定", "淘汰"}
     if decision not in allowed:
         raise ValueError(f"Decision must be one of: {', '.join(sorted(allowed))}")
@@ -519,18 +530,34 @@ def confirm_screening(root: Path, position: str, candidate: str, decision: str) 
     data, _ = read_markdown(overview)
     current = str(data.get("human_decision", "待确认"))
     if current != "待确认" and current != decision:
-        add_pending(
+        subject = f"{candidate}｜{position}"
+        if not confirmed_change:
+            reason_note = f"；用户理由：{reason.strip()}" if reason.strip() else ""
+            add_pending(
+                root,
+                "修改人工候选人结论",
+                subject,
+                f"当前人工结论为“{current}”，拟改为“{decision}”{reason_note}",
+                "获得明确确认后再修改正式结论",
+            )
+            raise PermissionError("Queued pending confirmation instead of overwriting human decision")
+        pending_id = resolve_pending(
             root,
             "修改人工候选人结论",
-            f"{candidate}｜{position}",
-            f"当前人工结论为“{current}”，拟改为“{decision}”",
-            "获得明确确认后再修改正式结论",
+            subject,
+            f"人工结论已由“{current}”修改为“{decision}”",
+            required_text=f"当前人工结论为“{current}”，拟改为“{decision}”",
         )
-        raise PermissionError("Queued pending confirmation instead of overwriting human decision")
+        if pending_id is None:
+            raise PermissionError("No matching pending confirmation exists for this human-decision change")
     stage = "待安排面试" if decision == "推进" else ("筛选待定" if decision == "待定" else "初筛淘汰")
-    update_frontmatter(overview, human_decision=decision, current_stage=stage, updated_at=today())
+    updates = {"human_decision": decision, "current_stage": stage, "updated_at": today()}
+    if reason.strip() or current != decision:
+        updates["human_decision_reason"] = reason.strip()
+    update_frontmatter(overview, **updates)
     refresh_candidate_overview(overview)
-    log_action(root, "screening.confirmed", candidate=candidate, position=position, decision=decision)
+    action = "screening.decision_changed" if current not in {"待确认", decision} else "screening.confirmed"
+    log_action(root, action, candidate=candidate, position=position, decision=decision, reason=reason.strip())
     if decision == "淘汰":
         return close_candidate(root, position, candidate, "初筛淘汰", reusable=False)
     return overview

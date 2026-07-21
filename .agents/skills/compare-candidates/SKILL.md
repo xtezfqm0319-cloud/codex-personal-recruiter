@@ -1,14 +1,95 @@
 ---
 name: compare-candidates
-description: Compare and prioritize candidates for one local position using relative evidence, confirmed personal recruiting preferences, risks, and next validation value. Use when the user asks who is strongest, who to interview first, how a batch should be ranked, why one person is ahead of another, or which candidates deserve limited interview slots.
+description: 按同一岗位的正式选人规则横向比较候选人，识别可比范围、证据差异、关键取舍和有限名额下的优先选择，并把相邻候选人的先后理由与反转条件写入岗位比较文件。适用于询问谁更强、谁应先面试、候选人如何排序、为什么 A 在 B 前面、面试名额有限时选谁，或需要重新审视已有排序。
 ---
 
-# Compare Candidates
+# 比较候选人
 
-1. Read `AGENTS.md`, `00_公司认知/个人招聘判断偏好.md`, the formal `岗位.md`, and every relevant candidate overview, resume analysis, original extraction, interview report, and human decision.
-2. Compare candidates at the same decision stage by default. If stages differ, say what is and is not comparable instead of flattening all evidence.
-3. Use the four resume recommendations where applicable, then order within each tier by evidence strength, role relevance, unresolved risk, and the user's confirmed preferences. Never calculate a score or rank by keyword count.
-4. For each person, state: relative advantage, decisive evidence, main risk, most valuable next verification, and why they sit above or below the nearest alternative.
-5. Write `02_岗位/<岗位>/候选人比较.md` using `05_共享模板/岗位候选人比较模板.md`. Mark facts, judgments, and unverified items; cite local source paths.
-6. Give a constrained recommendation when useful, such as “if only three interviews are available, prioritize A/B/C,” and explain the trade-off directly.
-7. In conversation, lead with the ordering and decision. Avoid one independent mini-resume per person and avoid narrating file operations.
+## 目标
+
+不要为了给出一张完整名次表而制造差异。帮助用户决定有限的招聘时间应该优先投入给谁，并清楚说明排序依据、最难取舍、当前不可比较的部分，以及什么新证据会改变顺序。
+
+## 读取规则
+
+1. 完整读取 [候选人比较判断与输出规范.md](references/候选人比较判断与输出规范.md)，严格使用其中的阶段可比性、证据归一、无分数排序、并列处理、相邻解释和写入前自检。
+2. 读取 `AGENTS.md`、`00_公司认知/通用招聘标准.md`、`00_公司认知/个人招聘判断偏好.md`、正式 `岗位.md`，以及比较范围内每位候选人的：
+   - 候选人总览与当前流程状态；
+   - 原始简历提取文本和简历分析；
+   - 已有面试准备、原始面试纪要和面试报告；
+   - AI 建议、人工正式结论和历史变更记录。
+3. 优先读取原始材料和正式主档案。汇总表、CSV、AI 摘要和已有比较文件只能帮助定位，不得作为唯一证据来源。
+4. 只应用已确认的个人招聘偏好。不得把某位候选人的单次人工结论反推成永久排序规则。
+
+## 先确定比较范围
+
+1. 明确本次比较的岗位、候选人集合、决策阶段和用户真正要做的决定，例如筛选面试名单、确定下一轮优先级或准备录用讨论。
+2. 默认只比较同一岗位、处于相同决策阶段、争夺同一种下一步资源的候选人。
+3. 候选人阶段不同时：
+   - 不得把“进入流程更深”直接当作“能力更强”；
+   - 先分别说明各阶段已有和缺失的证据；
+   - 只有用户需要跨阶段资源决策时，才比较当前投入价值，并明确哪些能力结论尚不可直接比较。
+4. 已有人工淘汰、归档或退出结论的候选人默认不占用当前推进名额；用户要求复盘或重新考虑时可以纳入，但不得修改原人工结论。
+5. 如果候选人集合或“第几个候选人”等引用存在歧义，先做最小澄清，不猜测对象。
+
+## 建立共同比较基线
+
+1. 从正式岗位画像提取：一票否决、能力底线、第一至第三排序因素、经历替代规则、加分项、风险信号和可放宽条件。
+2. 先执行绝对标准，再做相对排序。明确不符合一票否决或不可补偿底线的候选人，不得因为本批次整体较弱而被抬高。
+3. 不重新发明权重，不使用分数。岗位已确认的排序优先级就是主要取舍顺序；画像没有定义的关键冲突应列为待校准，不由 AI 静默决定。
+4. 每项比较必须使用同一口径：相同判断项、相同强弱证据定义、相同阶段预期。不得对喜欢的候选人放宽证据要求。
+
+## 比较证据而非标签
+
+1. 对每位候选人的决定性标准分别记录材料事实、证据强度、个人贡献边界、未验证项和冲突。
+2. 同一项目或同一说法被简历、AI 摘要和后续报告重复引用时，只算一组证据；重复出现不等于证据增强。
+3. 后续材料只有真正提供新事实、核验过程或反例时，才能增强或削弱原判断。面试表达更流畅不自动等于能力更强。
+4. 不按关键词数量、简历长度、公司名气、职位名称或其他背景标签排序。
+5. 材料没有写不等于候选人不会。证据缺失影响的是判断信心和下一步验证价值，不自动成为负面能力结论。
+
+## 无分数排序
+
+1. 先按是否满足硬性条件与能力底线分组，再依次比较岗位第一、第二、第三排序因素。
+2. 第一排序因素存在清晰差异时，优先以该差异决定先后；低优先级加分项不得抵消更高优先级的明显不足。
+3. 如果双方分别在不同关键因素占优，使用岗位画像的取舍规则。没有取舍规则时，指出真实冲突，并给出基于岗位结果的临时建议及其假设。
+4. 只有差异会改变资源分配时才强行分先后。证据不足或差异不具决策意义时，可以给出同一优先组，并说明打破并列所需的新证据。
+5. 不因用户要求“排个名”就制造虚假精度。输出可以是“第一优先组、第二优先组、暂不投入组”，组内只在有明确证据时排序。
+6. 完成初步顺序后，逐对检查相邻候选人：
+   - 前者在哪个更高优先级标准上证据更强；
+   - 后者有什么优势，但为什么不足以反超；
+   - 后者补充什么具体证据后可能反转顺序。
+
+## 有限名额决策
+
+1. 用户给出名额时，直接提供对应名单，不重新追问已经明确的容量。
+2. 用户未给名额时，根据实际候选人数给出最有用的紧约束场景，例如“只安排 1 人”和“最多安排 3 人”；候选人较少时不凑人数。
+3. 对名额边界上的最后入选者和第一位未入选者做重点比较，说明：
+   - 为什么名额给前者；
+   - 放弃后者可能损失什么；
+   - 什么新证据值得让用户扩大名额或交换人选。
+4. “下一步最值得验证”同时考虑结论改变概率和验证成本。不要把有限面试名额优先给几乎不可能通过验证翻转结论的人。
+
+## 人工结论与偏好边界
+
+1. 人工正式结论是流程事实，不是候选人能力证据。保留它与 AI 当前排序的差异，不互相覆盖。
+2. 如果用户解释为什么不同意排序，先区分：
+   - 本次证据遗漏或判断错误；
+   - 当前岗位的取舍规则需要校准；
+   - 可能存在可复用的个人招聘偏好。
+3. 只有用户明确表达可复用原则时，才使用 `$learn-recruiting-preferences`；单次交换顺序不自动形成偏好。
+4. 同一偏好如果已经写入正式岗位画像，不得再次计算为额外优势。
+
+## 写入与汇报
+
+1. 使用 `05_共享模板/岗位候选人比较模板.md` 写入 `02_岗位/<岗位>/候选人比较.md`。该文件是可重建业务视图，不得改变候选人主档案、AI 建议或人工结论。
+2. 写清比较范围、阶段、容量假设、优先组、相邻差异、最难取舍、顺序改变条件和本次使用的已确认偏好。
+3. 每个关键判断引用本地来源路径；区分事实、AI 判断、人工结论和未验证项。
+4. 对话中先给名单和资源决策，再解释最关键的两到三个取舍。不要为每位候选人重新写一篇独立简历摘要。
+5. 运行 `python -m recruiter --root . validate`。如果本次比较发生在简历处理之后且主档案状态有变化，先运行 `python -m recruiter --root . rebuild-index`。
+
+## 输出底线
+
+- 不使用分数、百分比、虚构权重或关键词计数。
+- 不把流程阶段、表达流畅度或材料数量直接当作能力高低。
+- 不掩盖不可比、并列、证据冲突或岗位画像缺少取舍规则。
+- 每个实际影响资源分配的先后顺序都必须有决定性证据。
+- 每个关键顺序都说明什么新证据可能改变它。

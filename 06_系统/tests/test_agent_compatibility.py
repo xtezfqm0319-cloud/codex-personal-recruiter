@@ -65,4 +65,40 @@ def test_process_resumes_has_detailed_chinese_contract() -> None:
         assert heading in reference
 
 
+def test_compare_candidates_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/compare-candidates/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/compare-candidates/references/候选人比较判断与输出规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+
+    assert "[候选人比较判断与输出规范.md](references/候选人比较判断与输出规范.md)" in skill
+    assert "先确定比较范围" in skill
+    assert "有限名额决策" in skill
+    for heading in (
+        "## 3. 阶段可比性",
+        "## 5. 证据归一与去重",
+        "## 7. 优势冲突、支配关系与并列",
+        "## 10. 相邻候选人解释",
+        "## 15. 写入前自检",
+    ):
+        assert heading in reference
+
+
+def test_confirm_screening_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/confirm-screening/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/confirm-screening/references/人工筛选确认判断与执行规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+
+    assert "[人工筛选确认判断与执行规范](references/人工筛选确认判断与执行规范.md)" in skill
+    assert "批量表达必须先在内部展开为逐人映射" in skill
+    assert "--confirmed-change" in skill
+    for heading in (
+        "## 3. 人工结论的严格含义",
+        "## 5. 批量范围与指代解析",
+        "## 8. 人工理由的记录规则",
+        "## 10. 已有人工结论的变更",
+        "## 17. 写入前自检",
+    ):
+        assert heading in reference
+
+
 SKILL_REFERENCE_PATTERN = re.compile(r"\$[a-z][a-z0-9-]*")
