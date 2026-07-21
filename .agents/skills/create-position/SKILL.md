@@ -1,15 +1,78 @@
 ---
 name: create-position
-description: Discuss, challenge, confirm, and create a local recruiting position from a JD or natural-language description. Use for new positions, position-profile discussions, JD clarification, or creating a pending-calibration position and scanning reusable historical candidates.
+description: 将 JD 或自然语言招聘需求转化为有证据标准的选人决策模型，讨论并质疑关键取舍，用户确认后创建本地岗位并扫描可复用人才。适用于新建岗位、澄清 JD、讨论岗位画像、设计筛选与排序规则，或创建待校准岗位。
 ---
 
-# Create Position
+# 创建岗位
 
-1. Read `AGENTS.md`, `00_公司认知/` including confirmed personal preferences, the supplied JD or description, and existing position names.
-2. Discuss before writing: lead with what the role is really hiring for, then summarize confirmed facts, contradictions, missing hard constraints, success signals, screening focus, interview focus, and relaxable conditions. Ask only questions that would materially change who gets recommended; challenge requirements that conflict or cannot be evidenced.
-3. Do not create a formal position until the user explicitly confirms. If the user proceeds with open questions, set status to `待校准` and preserve them under `待校准事项`.
-4. After confirmation, save the confirmed profile section to a temporary Markdown file and run `python -m recruiter --root . create-position --name "岗位名" --jd-file "路径" --profile-file "已确认画像.md"`.
-5. Fill `岗位.md` from confirmed material. Separate confirmed facts, working assumptions, and unverified items. Inherit, do not silently alter, `00_公司认知/通用招聘标准.md`.
-6. Run `python -m recruiter --root . search-history --query "岗位关键词" --position "岗位名"` once. Explain the strongest reusable historical matches in business language; never move them automatically.
-7. Run `python -m recruiter --root . rebuild-index` and `python -m recruiter --root . validate`.
-8. In conversation, report the confirmed hiring target, the two or three most decisive screening signals, open calibration questions, and any historical candidate worth attention. Do not narrate routine file creation.
+## 目标
+
+不要只改写或总结 JD。帮助用户建立一套可以直接指导简历筛选、候选人比较、面试验证和后续岗位校准的选人决策模型。
+
+## 读取上下文
+
+1. 完整读取 [建岗判断与输出规范.md](references/建岗判断与输出规范.md)，严格使用其中的回复格式、证据口径、取舍规则和写入前自检。
+2. 读取 `AGENTS.md`、`00_公司认知/` 中所有相关文件、用户提供的 JD 或自然语言描述、现有岗位名称，以及相关的已确认岗位材料。
+3. 应用已确认的公司标准和个人招聘偏好。不得把待确认偏好、单次历史决定或 JD 中的宣传用语直接变成正式选人标准。
+4. 将信息明确区分为已确认事实、工作假设、未验证项和矛盾项。不得静默补全缺失的业务事实。
+
+## 主导岗位讨论
+
+1. 先给判断，不要先发一份空白问卷。用一句话说明要招什么人、这个人必须实现什么结果，以及最重要的约束是什么。
+2. 提问前先给出初步选人模型：
+   - 在第一个有意义的工作周期内应实现的结果，例如实习周期、试用期或入职前三至六个月；
+   - 不满足即失去候选资格的一票否决条件；
+   - 必须达到、但未必决定排序的能力底线；
+   - 真正决定谁排在前面的关键区分项；
+   - 只有在更重要标准接近时才发挥作用的加分信号；
+   - 应降低判断信心的负面或风险信号。
+3. 区分 JD 宣传语言和可执行的选人标准。把“有热情”“沟通能力强”“熟悉 AI”等模糊要求转化为可观察行为、材料证据或验证任务。无法可靠判断的要求应删除或降低优先级。
+4. 每轮最多提出三个问题。只询问会改变候选人准入、排序、证据要求或面试计划的问题。
+5. 每个问题都简要说明：
+   - 为什么需要确认；
+   - 不同答案会如何改变筛选或排序；
+   - 用户没有明确偏好时，AI 建议采用什么默认规则。
+6. 不要优先追问薪酬、招聘人数或精确到岗日期等普通行政信息，除非这些信息会显著改变可选人群或候选人接受概率。不会阻塞选人的缺失信息保留为待校准项。
+7. 主动质疑互相冲突、不现实、重复或无法取证的要求。说明它们会造成什么招聘后果，并提出具体替代方案，不要只问用户是否保留。
+
+## 建立选人决策模型
+
+1. 不要把岗位要求保留为没有优先级的平铺清单。明确每项要求属于：一票否决、能力底线、排序区分项、加分项、风险信号或可放宽条件。
+2. 明确写出取舍规则：当候选人的优势发生冲突时谁应排在前面，哪些经历可以互相替代，以及哪些短板无法由其他优势补偿。
+3. 对每个决定性标准定义：
+   - 什么是强证据；
+   - 什么是弱证据或证据不足；
+   - 什么情况应标记为缺失或未验证；
+   - 应通过简历、面试、现场任务还是后续核验来判断。
+4. 区分“参与过”和“本人主导、决策或交付”。不得把工具名称、雇主品牌、职位名称或泛化自我描述当作能力证据。
+5. 继承 `00_公司认知/通用招聘标准.md`。如果 JD 与已确认公司标准冲突，明确指出并请求用户决定；不得静默放宽或收紧标准。
+6. 确保模型能够真正做出取舍。如果几乎所有看似相关的候选人都能满足画像，指出哪些标准仍需提高区分度或明确门槛。
+
+## 写入前确认
+
+1. 创建岗位前，先给出简洁的“选人规则预览”，包括：
+   - 岗位真正的招聘任务；
+   - 最重要的预期结果；
+   - 一票否决条件和能力底线；
+   - 两到三个决定候选人排序的关键信号；
+   - 明确的候选人取舍规则；
+   - 简历证据、面试证据和可选的现场任务证据；
+   - 仍可能改变选人模型的未决事项。
+2. 当剩余问题已经不会实质阻塞选人时，请求用户明确确认。用户确认前不得创建正式岗位。
+3. 如果用户明确选择在仍有重要问题未解决时继续，创建状态为 `待校准` 的岗位，并把问题保存在 `待校准事项`。不要反复追问不阻塞选人的普通缺失信息。
+
+## 创建与校验
+
+1. 用户确认后，将已确认画像保存为临时 Markdown 文件，运行 `python -m recruiter --root . create-position --name "岗位名" --jd-file "路径" --profile-file "已确认画像.md"`。
+2. 保留原始 JD，生成可直接用于决策的 `岗位画像`，其中包括：
+   - 岗位任务和预期结果；
+   - 目标候选人类型；
+   - 一票否决条件、能力底线和决定性排序因素；
+   - 取舍与经历替代规则；
+   - 关键经历和证据标准；
+   - 简历筛选规则；
+   - 面试和现场任务的重点验证内容；
+   - 可放宽条件、已确认事实、假设、矛盾项和未验证项。
+3. 运行一次 `python -m recruiter --root . search-history --query "最能代表岗位的能力与经历关键词" --position "岗位名"`。查询词应来自岗位任务、决定性能力和相关经历，不要只使用岗位名称。用业务语言解释最值得关注的历史人选，不得自动移动候选人。
+4. 运行 `python -m recruiter --root . rebuild-index` 和 `python -m recruiter --root . validate`。
+5. 对话中优先汇报已确认的招聘目标、决定性排序规则、仍待校准的事项，以及值得关注的历史候选人。除非执行失败，否则不展开文件创建或 CLI 操作过程。

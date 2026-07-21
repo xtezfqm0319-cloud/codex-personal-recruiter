@@ -35,4 +35,17 @@ def test_claude_skills_match_canonical_skills() -> None:
 def test_claude_cross_skill_calls_use_slash_commands() -> None:
     for skill in (PROJECT_ROOT / ".claude/skills").glob("*/SKILL.md"):
         assert not SKILL_REFERENCE_PATTERN.search(skill.read_text(encoding="utf-8")), skill
+
+
+def test_create_position_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/create-position/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/create-position/references/建岗判断与输出规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+
+    assert "[建岗判断与输出规范.md](references/建岗判断与输出规范.md)" in skill
+    assert "每轮最多提出三个问题" in skill
+    for heading in ("## 1. 第一轮回复格式", "## 4. 证据强弱与验证阶段", "## 7. 选人规则预览格式", "## 10. 写入前自检"):
+        assert heading in reference
+
+
 SKILL_REFERENCE_PATTERN = re.compile(r"\$[a-z][a-z0-9-]*")
