@@ -49,8 +49,14 @@ def build_parser() -> argparse.ArgumentParser:
     analysis.add_argument("--evidence", required=True)
     analysis.add_argument("--risk", required=True)
     analysis.add_argument("--unverified", default="无；仍需在面试中核验关键经历。")
-    analysis.add_argument("--education-tier", required=True, choices=["985", "211", "非985/211", "未验证"])
+    analysis.add_argument(
+        "--hard-constraint-status",
+        default="不适用",
+        choices=["符合", "存在经确认例外", "不符合", "未验证", "不适用"],
+    )
     analysis.add_argument("--exception-reason", default="")
+    analysis.add_argument("--verification", default="", help="candidate-specific next verification questions")
+    analysis.add_argument("--preference-impact", default="", help="confirmed personal preference applied to this judgment")
 
     confirm = sub.add_parser("confirm-screening", help="record initial human screening decision")
     confirm.add_argument("--position", required=True)
@@ -135,8 +141,10 @@ def main(argv: list[str] | None = None) -> int:
                 args.evidence,
                 args.risk,
                 args.unverified,
-                args.education_tier,
+                args.hard_constraint_status,
                 args.exception_reason,
+                args.verification,
+                args.preference_impact,
             )
             rebuild_indexes(root)
             _print({"status": "ok", "path": path.relative_to(root)})

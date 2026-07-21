@@ -24,9 +24,9 @@ from recruiter.workflows import (
 
 
 def add_position_and_resume(root: Path) -> None:
-    create_position(root, "AI产品经理", "负责 AI 产品从发现到交付。\n要求：5 年产品经验，985 本科。")
+    create_position(root, "AI产品经理", "负责 AI 产品从发现到交付。\n要求：5 年相关产品经验。")
     (root / "01_待处理" / "简历" / "林晓-AI产品经理.txt").write_text(
-        "姓名：林晓\n目标岗位：AI产品经理\n第一学历：985本科\n经历：负责企业知识助手，推动上线。",
+        "姓名：林晓\n目标岗位：AI产品经理\n经历：负责企业知识助手，推动上线。",
         encoding="utf-8",
     )
 
@@ -48,11 +48,15 @@ def test_ingest_resume_and_rebuild_index(workspace: Path) -> None:
         "简历明确写有企业知识助手上线经历。",
         "规模和效果数据未披露。",
         "个人贡献边界待验证。",
-        "985",
+        "符合",
+        verification="- 追问候选人在知识助手上线中的最终决策边界；若只承担协调执行，当前建议应下调。",
+        preference_impact="- 未使用个人偏好，仅按岗位画像和证据判断。",
     )
     analysis = (workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "01_简历分析.md").read_text(encoding="utf-8")
     assert "## 相对位置" in analysis
     assert "## 已确认个人偏好的影响" in analysis
+    assert "最终决策边界" in analysis
+    assert "未使用个人偏好" in analysis
     counts = rebuild_indexes(workspace)
     assert counts["candidates"] == 1
     assert "林晓" in (workspace / "02_岗位" / "AI产品经理" / "本批次待人工确认.md").read_text(encoding="utf-8")
@@ -62,11 +66,18 @@ def test_ingest_resume_and_rebuild_index(workspace: Path) -> None:
     assert not [i for i in validate_workspace(workspace) if i.level == "ERROR"]
 
 
-def test_education_guard(workspace: Path) -> None:
+def test_hard_constraint_guard(workspace: Path) -> None:
     add_position_and_resume(workspace)
     ingest_resumes(workspace)
-    with pytest.raises(ValueError, match="cannot be recommended"):
-        record_resume_analysis(workspace, "AI产品经理", "林晓", "推", "摘要", "证据", "风险", "未知", "未验证")
+    with pytest.raises(ValueError, match="hard constraint"):
+        record_resume_analysis(workspace, "AI产品经理", "林晓", "推", "摘要", "证据", "风险", "未知", "不符合")
+
+
+def test_hard_constraint_exception_requires_reason(workspace: Path) -> None:
+    add_position_and_resume(workspace)
+    ingest_resumes(workspace)
+    with pytest.raises(ValueError, match="exception requires"):
+        record_resume_analysis(workspace, "AI产品经理", "林晓", "推", "摘要", "证据", "风险", "未知", "存在经确认例外")
 
 
 def test_ambiguous_resume_goes_to_pending(workspace: Path) -> None:
@@ -82,7 +93,7 @@ def test_ambiguous_resume_goes_to_pending(workspace: Path) -> None:
 def test_human_decision_cannot_be_overwritten(workspace: Path) -> None:
     add_position_and_resume(workspace)
     ingest_resumes(workspace)
-    record_resume_analysis(workspace, "AI产品经理", "林晓", "推", "摘要", "证据", "风险", "未知", "985")
+    record_resume_analysis(workspace, "AI产品经理", "林晓", "推", "摘要", "证据", "风险", "未知", "符合")
     confirm_screening(workspace, "AI产品经理", "林晓", "推进")
     with pytest.raises(PermissionError):
         confirm_screening(workspace, "AI产品经理", "林晓", "待定")
@@ -93,7 +104,7 @@ def test_human_decision_cannot_be_overwritten(workspace: Path) -> None:
 def test_full_interview_brief_archive_and_history(workspace: Path) -> None:
     add_position_and_resume(workspace)
     ingest_resumes(workspace)
-    record_resume_analysis(workspace, "AI产品经理", "林晓", "推", "闭环经验明确", "知识助手已上线", "数据不足", "影响范围待核验", "985")
+    record_resume_analysis(workspace, "AI产品经理", "林晓", "推", "闭环经验明确", "知识助手已上线", "数据不足", "影响范围待核验", "符合")
     confirm_screening(workspace, "AI产品经理", "林晓", "推进")
     (workspace / "01_待处理" / "面试纪要" / "林晓-AI产品经理-第1轮.txt").write_text(
         "候选人：林晓\n岗位：AI产品经理\n第1轮面试\n面试官评价：拆解清楚。\n事实：候选人说明知识助手先灰度后全量。",
