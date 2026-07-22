@@ -1,4 +1,4 @@
 interface:
   display_name: "分析面试"
-  short_description: "Analyze interview notes with separated conclusions"
-  default_prompt: "Use $analyze-interview to process the new interview notes."
+  short_description: "把面试纪要转成分层、可追溯的多轮招聘证据"
+  default_prompt: "使用 $analyze-interview 处理新的面试纪要，说明本轮验证、削弱或推翻了什么，并给出是否值得继续下一轮的明确倾向。"

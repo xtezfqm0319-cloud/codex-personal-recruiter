@@ -78,12 +78,32 @@ def build_parser() -> argparse.ArgumentParser:
     interview.add_argument("--ai-analysis", required=True)
     interview.add_argument("--evidence", required=True)
     interview.add_argument("--unverified", required=True)
+    interview.add_argument("--question-coverage", default="")
+    interview.add_argument("--strengthened", default="")
+    interview.add_argument("--weakened", default="")
+    interview.add_argument("--unchanged", default="")
+    interview.add_argument("--contradictions", default="")
+    interview.add_argument(
+        "--inclination",
+        default="继续验证",
+        choices=["建议推进", "继续验证", "建议暂缓", "不建议推进"],
+    )
+    interview.add_argument("--decision-changer", default="")
+    interview.add_argument("--next-verification", default="")
+    interview.add_argument("--next-round-value", default="")
+    interview.add_argument("--preference-impact", default="")
 
     decision = sub.add_parser("confirm-interview", help="record a human interview decision")
     decision.add_argument("--position", required=True)
     decision.add_argument("--candidate", required=True)
     decision.add_argument("--round", type=int, required=True, choices=range(1, 6))
     decision.add_argument("--decision", required=True)
+    decision.add_argument("--reason", default="", help="explicit human reason for the formal round decision")
+    decision.add_argument(
+        "--confirmed-change",
+        action="store_true",
+        help="execute a previously queued and explicitly reconfirmed interview-decision change",
+    )
 
     brief = sub.add_parser("generate-final-brief", help="compose an evidence-traceable final brief")
     brief.add_argument("--position", required=True)
@@ -179,11 +199,29 @@ def main(argv: list[str] | None = None) -> int:
                 args.ai_analysis,
                 args.evidence,
                 args.unverified,
+                args.question_coverage,
+                args.strengthened,
+                args.weakened,
+                args.unchanged,
+                args.contradictions,
+                args.inclination,
+                args.decision_changer,
+                args.next_verification,
+                args.next_round_value,
+                args.preference_impact,
             )
             rebuild_indexes(root)
             _print({"status": "ok", "path": path.relative_to(root)})
         elif args.command == "confirm-interview":
-            path = set_interview_decision(root, args.position, args.candidate, args.round, args.decision)
+            path = set_interview_decision(
+                root,
+                args.position,
+                args.candidate,
+                args.round,
+                args.decision,
+                args.reason,
+                args.confirmed_change,
+            )
             rebuild_indexes(root)
             _print({"status": "ok", "path": path.relative_to(root)})
         elif args.command == "generate-final-brief":

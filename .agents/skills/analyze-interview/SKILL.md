@@ -1,14 +1,161 @@
 ---
 name: analyze-interview
-description: Match and analyze local interview notes for active candidates across one to five rounds. Use for new interview transcripts, a named candidate's interview, or updating interview evidence and workflow status.
+description: 识别并归档本地一至五轮面试纪要，将面试官评价、候选人陈述、可用证据、AI 独立判断和人工正式结论严格分层，并与面试前假设及历轮材料比较，说明本轮验证、削弱、推翻或新增了什么。适用于处理新面试纪要、分析指定候选人的某轮面试、判断是否值得继续下一轮、更新多轮证据和流程状态。
 ---
 
-# Analyze Interview
+# 分析面试纪要
 
-1. Read `AGENTS.md`, confirmed personal preferences, the position, candidate overview, resume analysis, any existing `面试准备.md`, prior rounds, and files in `01_待处理/面试纪要/`.
-2. Run `ingest-interviews`. Do not guess an ambiguous candidate, position, or round; leave it in the pending area.
-3. Read the preserved raw note and extraction. Separate: interviewer's evaluation (faithful attribution), AI independent analysis, evidence, and unverified items. State which planned questions were answered, which claims were strengthened or weakened, and which contradictions remain.
-4. Record the analysis with `record-interview-analysis --round 1..5`. Do not write a human conclusion.
-5. If the user explicitly gives the formal round decision, run `confirm-interview`. Never overwrite a different existing human decision without a pending confirmation.
-6. Give a clear AI inclination for the next action without writing the human conclusion. Identify the single unresolved issue most likely to change that inclination.
-7. Run `rebuild-index` and `validate`. In conversation, lead with what this round changed and whether another round is worth the user’s time.
+## 目标
+
+面试分析不是总结一遍谈话内容，也不是根据面试官的好恶改写结论。它要把本轮新增信息变成可追溯的岗位证据，回答：
+
+- 原计划验证的问题是否真正得到回答；
+- 哪些既有判断被支持、削弱或推翻；
+- 新出现了什么证据、矛盾和风险；
+- 当前是否值得继续投入下一轮；
+- 哪一个未解决问题最可能改变下一步倾向。
+
+执行本 Skill 时，必须完整读取并遵守 [面试纪要分析与多轮证据规范](references/面试纪要分析与多轮证据规范.md)。
+
+## 必读材料
+
+1. `AGENTS.md`；
+2. `00_公司认知/通用招聘标准.md`；
+3. `00_公司认知/个人招聘判断偏好.md`，只应用已确认偏好；
+4. 正式 `岗位.md`；
+5. 候选人总览、原始简历、简历分析和岗位候选人比较；
+6. 本轮 `面试准备.md`，若存在；
+7. 本轮原始纪要、提取文本和文本质量报告；
+8. 所有更早轮次的原始纪要、面试报告和人工正式结论。
+
+不要只读旧报告摘要。发生证据冲突或需要判断原意时，必须回到原始纪要。
+
+## 扫描与匹配
+
+运行：
+
+```bash
+python -m recruiter --root . ingest-interviews
+```
+
+脚本负责提取、OCR、姓名与岗位匹配、轮次识别、移动、哈希和建档。
+
+候选人、岗位、轮次或文本完整度无法唯一确认时，保留原文件并进入待确认，不继续生成实质分析。不要根据文件顺序、相似姓名或流程猜测归属。
+
+## 严格分层
+
+报告必须区分：
+
+- 面试官评价：忠实提取并保持归因；没有评价时写“纪要未记录”，不得补写；
+- 候选人陈述：只能说明候选人本轮声称或解释了什么，不自动视为事实；
+- 证据事实：纪要中可定位的任务、本人动作、决策、约束、结果、反例和口径；
+- AI 独立分析：证据对岗位标准意味着什么，以及仍不能证明什么；
+- 人工正式结论：只有用户明确给出时才能写入。
+
+面试官说“逻辑很好”不是能力证据；候选人说“我主导了”也不是完整证据。必须继续检查具体行为和责任边界。
+
+## 分析本轮新增证据
+
+先对照本轮面试准备，逐项标记：
+
+- 已充分回答；
+- 部分回答；
+- 未回答；
+- 未提问；
+- 出现了计划外但重要的新证据。
+
+再把岗位关键判断项分为：
+
+- 得到支持；
+- 被削弱；
+- 被推翻；
+- 新增但尚未验证；
+- 保持不变。
+
+同一项目故事再次出现不会自动增强证据。只有新增具体事实、个人贡献、决策依据、结果口径、反例、合理解释或独立来源支持时，才提高证据强度。
+
+## 多轮证据处理
+
+每轮分析都要与简历判断和更早轮次比较，而不是从零开始。
+
+- 后一轮提供更具体证据时，说明具体新增了什么；
+- 前后表述冲突时保留双方原意和来源，先判断是否为时间、范围或统计口径差异；
+- 新证据足以削弱旧判断时明确降级，不以“之前已经通过”为由保留；
+- 多位面试官重复同一评价不等于多份独立证据；
+- 人工上一轮通过只表示流程决定，不证明所有风险已经消失。
+
+## 形成 AI 下一步倾向
+
+只使用以下四类：
+
+- `建议推进`：本轮关键目标获得足够证据，剩余问题不会阻止进入下一步；
+- `继续验证`：没有明确否定，但仍有一项可通过下一轮有效解决的决定性缺口；
+- `建议暂缓`：材料质量、核心矛盾或外部条件使当前不适合继续投入，等待特定信息；
+- `不建议推进`：关键底线未达到、决定性证据被推翻，或继续面试的预期信息价值很低。
+
+必须同时说明：决定性理由、最大风险、最可能改变倾向的新证据，以及再安排一轮是否值得用户的时间。
+
+不要使用分数或百分比，也不要把 AI 倾向写入人工正式结论。
+
+## 落盘
+
+对每轮调用：
+
+```bash
+python -m recruiter --root . record-interview-analysis \
+  --position "岗位" \
+  --candidate "候选人" \
+  --round 1 \
+  --interviewer-evaluation "面试官原始评价或纪要未记录" \
+  --ai-analysis "AI 对岗位标准的独立判断" \
+  --evidence "本轮候选人陈述与证据事实" \
+  --unverified "风险与未验证项" \
+  --question-coverage "计划问题的回答覆盖情况" \
+  --strengthened "得到支持的判断" \
+  --weakened "被削弱或推翻的判断" \
+  --contradictions "材料矛盾及双方来源" \
+  --inclination "建议推进|继续验证|建议暂缓|不建议推进" \
+  --decision-changer "最可能改变倾向的新证据" \
+  --next-verification "若继续，下一轮只需验证什么" \
+  --preference-impact "本轮实际使用的已确认偏好"
+```
+
+没有对应内容时明确写“本轮未发现”或“无”，不要为了填满字段制造变化。
+
+若用户在同一消息中明确给出本轮正式结论，完成 AI 分析后再运行：
+
+`python -m recruiter --root . confirm-interview --position "岗位" --candidate "候选人" --round 1 --decision "人工结论" [--reason "用户明确理由"]`
+
+已有不同人工结论不得直接覆盖。第一次变更请求只生成待确认事项；只有用户随后明确确认同一候选人、轮次和目标结论时，才增加 `--confirmed-change` 执行并标记待确认项已处理。
+
+## 完成与汇报
+
+状态变化后运行：
+
+```bash
+python -m recruiter --root . rebuild-index
+python -m recruiter --root . validate
+```
+
+对话中优先告诉用户：
+
+1. 本轮真正改变了什么；
+2. 当前 AI 倾向；
+3. 是否值得再投入一轮；
+4. 如果继续，下一轮只需要验证什么；
+5. 哪些内容仍等待用户给出人工正式结论。
+
+不要复述整场面试，不把命令、移动和索引过程作为主要汇报内容。
+
+## 写入前自检
+
+- 面试官评价、候选人陈述、证据、AI 判断和人工结论是否分开？
+- 每条关键证据是否能回到原始纪要？
+- 候选人的陈述是否被误写成已验证事实？
+- 是否对照了面试准备和历轮证据？
+- 重复故事是否被错误计算为证据增强？
+- 支持、削弱、推翻和保持不变是否有具体依据？
+- 矛盾是否保留双方来源和口径？
+- 下一步倾向是否说明了反转条件？
+- 再安排一轮是否真的有明确且可解决的决策问题？
+- 是否没有替用户写入人工正式结论？

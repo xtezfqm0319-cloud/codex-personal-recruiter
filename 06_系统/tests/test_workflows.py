@@ -160,17 +160,53 @@ def test_full_interview_brief_archive_and_history(workspace: Path) -> None:
         encoding="utf-8",
     )
     assert ingest_interviews(workspace)[0]["status"] == "已建档"
-    record_interview_analysis(workspace, "AI产品经理", "林晓", 1, "面试官认为拆解清楚。", "展示了分阶段验证思路。", "纪要记录先灰度后全量。", "上线效果数据待核验。")
+    record_interview_analysis(
+        workspace,
+        "AI产品经理",
+        "林晓",
+        1,
+        "面试官认为拆解清楚。",
+        "本轮支持候选人具备分阶段验证思路，但业务结果归因仍不完整。",
+        "候选人表示先进行20人灰度，再扩大到600人；纪要记录了灰度到全量的过程。",
+        "上线效果的基线、口径及个人最终决策边界待核验。",
+        question_coverage="灰度策略问题已充分回答；业务结果归因只得到部分回答。",
+        strengthened="原‘具备分阶段验证思路’的判断得到新增行为证据支持。",
+        weakened="本轮未发现被明确推翻的判断。",
+        unchanged="业务结果归因风险保持不变。",
+        contradictions="本轮未发现需要单独处理的材料矛盾。",
+        inclination="建议推进",
+        decision_changer="若后续显示灰度范围和停止条件均由他人制定，当前倾向应下调。",
+        next_verification="只验证个人最终决策边界和结果归因。",
+        next_round_value="值得；剩余问题重要且可以通过一次项目深挖解决。",
+        preference_impact="未使用个人偏好，仅按岗位画像和本轮证据判断。",
+    )
     report = (workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "02_面试" / "01_第1轮" / "面试报告.md").read_text(encoding="utf-8")
-    assert "## 本轮改变了什么" in report
-    assert "## AI 独立分析" in report
-    assert "## AI 下一步倾向" in report
+    assert "## 六、本轮改变了什么" in report
+    assert "## 五、AI 独立分析" in report
+    assert "## 九、AI 下一步倾向" in report
+    assert "AI 下一步倾向：建议推进" in report
+    assert "灰度策略问题已充分回答" in report
+    assert "当前倾向应下调" in report
+    overview, overview_body = read_markdown(
+        workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "00_候选人总览.md"
+    )
+    assert overview["interview_summaries"][0]["inclination"] == "建议推进"
+    assert "第1轮：建议推进" in overview_body
     set_interview_decision(workspace, "AI产品经理", "林晓", 1, "通过，进入终面")
+    report = (workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "02_面试" / "01_第1轮" / "面试报告.md").read_text(encoding="utf-8")
+    assert "## 十一、人工正式结论\n\n通过，进入终面" in report
     brief = generate_final_brief(workspace, "AI产品经理", "林晓", "薪资期望在预算内。")
     brief_text = brief.read_text(encoding="utf-8")
-    assert brief.exists() and "不替代最终录用决定" in brief_text
+    assert brief.exists() and "不替代人工最终录用决定" in brief_text
     assert "建议进入录用讨论 / 谨慎推进 / 继续验证 / 不建议推进" in brief_text
-    assert "## 十、已确认个人偏好的影响" in brief_text
+    assert "## 二、岗位决策证据表" in brief_text
+    assert "## 五、历轮判断发生了什么变化" in brief_text
+    assert "## 八、终面决定性问题" in brief_text
+    assert "## 十、已明确、不建议重复询问的内容" in brief_text
+    assert "## 十二、已确认个人偏好的影响" in brief_text
+    assert "灰度策略问题已充分回答" not in brief_text
+    assert "第1轮：AI 倾向 建议推进" in brief_text
+    assert "HR 补充：薪资期望在预算内。" in brief_text
     archive = close_candidate(workspace, "AI产品经理", "林晓", "HC暂停，人才保留", reusable=True)
     rebuild_indexes(workspace)
     assert archive.exists()
@@ -179,3 +215,61 @@ def test_full_interview_brief_archive_and_history(workspace: Path) -> None:
     calibration = calibrate_position(workspace, "AI产品经理")
     assert calibration.exists()
     assert not [i for i in validate_workspace(workspace) if i.level == "ERROR"]
+
+
+def test_interview_analysis_rejects_unknown_inclination(workspace: Path) -> None:
+    add_position_and_resume(workspace)
+    ingest_resumes(workspace)
+    confirm_screening(workspace, "AI产品经理", "林晓", "推进")
+    (workspace / "01_待处理" / "面试纪要" / "林晓-AI产品经理-第1轮.txt").write_text(
+        "候选人：林晓\n岗位：AI产品经理\n第1轮面试\n候选人表示参与项目。",
+        encoding="utf-8",
+    )
+    ingest_interviews(workspace)
+    with pytest.raises(ValueError, match="Interview inclination"):
+        record_interview_analysis(
+            workspace,
+            "AI产品经理",
+            "林晓",
+            1,
+            "纪要未记录",
+            "证据不足",
+            "仅记录参与项目",
+            "个人贡献待验证",
+            inclination="强推",
+        )
+
+
+def test_interview_decision_change_requires_matching_reconfirmation(workspace: Path) -> None:
+    add_position_and_resume(workspace)
+    ingest_resumes(workspace)
+    confirm_screening(workspace, "AI产品经理", "林晓", "推进")
+    (workspace / "01_待处理" / "面试纪要" / "林晓-AI产品经理-第1轮.txt").write_text(
+        "候选人：林晓\n岗位：AI产品经理\n第1轮面试\n候选人说明了项目经历。",
+        encoding="utf-8",
+    )
+    ingest_interviews(workspace)
+    record_interview_analysis(workspace, "AI产品经理", "林晓", 1, "纪要未记录", "仍需验证", "项目经历", "个人贡献待验证")
+    set_interview_decision(workspace, "AI产品经理", "林晓", 1, "通过", "用户认可本轮证据")
+
+    with pytest.raises(PermissionError):
+        set_interview_decision(workspace, "AI产品经理", "林晓", 1, "待定", "用户希望比较其他候选人")
+    with pytest.raises(PermissionError, match="No matching pending"):
+        set_interview_decision(workspace, "AI产品经理", "林晓", 1, "淘汰", confirmed_change=True)
+
+    set_interview_decision(
+        workspace,
+        "AI产品经理",
+        "林晓",
+        1,
+        "待定",
+        "用户希望比较其他候选人",
+        confirmed_change=True,
+    )
+    overview, _ = read_markdown(
+        workspace / "02_岗位" / "AI产品经理" / "候选人" / "林晓" / "00_候选人总览.md"
+    )
+    assert overview["interview_human_decisions"]["1"] == "待定"
+    assert overview["interview_human_decision_reasons"]["1"] == "用户希望比较其他候选人"
+    pending = (workspace / "04_全局索引" / "待确认事项.md").read_text(encoding="utf-8")
+    assert "状态：已确认并执行" in pending

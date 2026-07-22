@@ -1,14 +1,119 @@
 ---
 name: prepare-interview
-description: Prepare a candidate-specific interview plan from the position, resume, prior rounds, confirmed personal preferences, contradictions, and evidence gaps. Use when the user asks how to interview someone, what to ask in the next round, how to verify a resume claim, or wants a focused interview guide before an interview.
+description: 根据正式岗位画像、候选人简历、筛选判断、候选人比较、历轮面试证据和已确认个人偏好，设计本轮真正能改变招聘判断的候选人专属面试方案。适用于用户询问某人下一轮怎么面、应该重点问什么、如何验证简历主张、怎样追问个人贡献或材料矛盾，以及需要生成可直接使用的面试准备文件。
 ---
 
-# Prepare Interview
+# 准备候选人面试
 
-1. Read `AGENTS.md`, `00_公司认知/个人招聘判断偏好.md`, the formal position, candidate overview, original resume/extraction, resume analysis, and every prior raw interview note and report.
-2. Separate what is already supported, what is merely claimed, what conflicts across materials, and what remains important but untested. Do not waste interview time re-asking settled facts.
-3. Determine the current or requested round from 1–5 and adjust the goal: early rounds test fundamentals and ownership; later rounds test depth, judgment, trade-offs, risk, and unresolved decision blockers.
-4. Produce 5–8 prioritized questions. For each include the evidence gap, main question, useful follow-up, and what a strong versus weak answer would demonstrate. Do not use generic question-bank filler.
-5. Put the three highest-value questions first and identify the single question most likely to change the current recommendation.
-6. Write `02_岗位/<岗位>/候选人/<候选人>/02_面试/<轮次>/面试准备.md` using `05_共享模板/面试准备清单模板.md`. Creating a future round folder does not record an interview result.
-7. In conversation, give the interview objective, top questions, and watch-outs. Do not pre-write the interviewer’s conclusion or a formal human decision.
+## 目标
+
+面试准备不是生成一套完整题库，而是在有限时间内找出最值得验证的少数问题，帮助用户决定候选人是否值得继续投入招聘资源。
+
+每个问题都必须来自当前岗位的决定性标准、候选人的具体证据缺口、材料矛盾或尚未排除的风险。不要为了覆盖面而询问已经充分确认、与决策无关或只能得到空泛回答的问题。
+
+执行本 Skill 时，必须完整读取并遵守 [面试准备判断与问题设计规范](references/面试准备判断与问题设计规范.md)。
+
+## 必读材料
+
+根据候选人当前阶段读取：
+
+1. `AGENTS.md`；
+2. `00_公司认知/通用招聘标准.md`；
+3. `00_公司认知/个人招聘判断偏好.md`，只使用已确认偏好；
+4. 对应岗位正式 `岗位.md`，尤其是一票否决、能力底线、决定性排序因素、证据标准和面试重点；
+5. 候选人 `00_候选人总览.md`、原始简历或提取文本、`01_简历分析.md`；
+6. 岗位 `候选人比较.md`，若存在，用于识别当前相对位置和可能反转顺序的证据；
+7. 所有已存在的面试准备、原始纪要和面试报告；
+8. 用户本次补充的面试轮次、时长、面试官角色和特别关注点。
+
+材料存在冲突时保留双方来源，不静默选择其中一方。缺少非关键背景信息时使用合理默认值继续；缺少候选人身份、目标岗位或轮次且无法唯一判断时，才向用户确认。
+
+## 先定义本轮决策任务
+
+写问题前，先回答：
+
+- 本轮结束后，用户需要做什么决定？
+- 当前倾向是什么，依据和边界是什么？
+- 哪一个未验证问题最可能改变当前倾向？
+- 本轮最多能验证哪几项真正重要的内容？
+
+轮次只用于调整深度，不机械决定问题。岗位自定义流程优先于通用的“一面、二面、终面”假设。
+
+若用户未给时长，默认准备 45—60 分钟方案；若未明确轮次，从候选人当前流程状态和已有材料推断，只有多种解释会显著改变方案时才提问。
+
+## 建立证据地图
+
+将岗位决定性标准与候选人当前材料分为：
+
+- 已有强证据：通常不重复询问，除非出现矛盾或需要验证证据边界；
+- 只有主张或弱证据：优先验证本人任务、关键动作、决策和结果；
+- 材料冲突：使用中性问题澄清，不预设候选人在夸大；
+- 关键但完全未验证：根据岗位重要性进入优先问题；
+- 与当前决定关系很弱：不占用本轮时间。
+
+同一经历在简历、摘要和面试报告中重复出现，仍视为同一证据；只有新增事实、核验过程、反例或更清楚的个人贡献才算证据增强。
+
+## 选择问题
+
+优先选择同时满足以下条件的问题：
+
+- 对岗位结果重要；
+- 当前证据不充分或存在冲突；
+- 候选人的回答能够明显区分“达到要求”和“未达到要求”；
+- 能在本轮时长内获得可记录的行为或事实证据；
+- 回答结果确实可能改变推进倾向、相对顺序或下一轮安排。
+
+默认设计 5—7 个主问题；30 分钟以内缩减为 3—4 个，60 分钟以上通常不超过 8 个。始终标出时间有限时必问的三题，以及唯一一个最可能改变当前建议的问题。
+
+## 每道题的结构
+
+每个主问题必须包含：
+
+1. 对应的岗位判断项；
+2. 当前已有证据和具体缺口；
+3. 一个自然、开放、只问一件事的主问题；
+4. 针对模糊回答、个人贡献、决策依据、结果归因或反例的追问路径；
+5. 可观察的强信号；
+6. 可观察的弱信号或风险信号；
+7. 强回答与弱回答分别会怎样影响当前判断；
+8. 面试官最需要原样记录的事实、数字、决策或矛盾。
+
+不要使用暗示正确答案的问题，不把多个复杂问题塞进一句话，也不要把表达流畅、紧张程度或主观“气场”当作能力证据。
+
+## 历轮衔接
+
+上一轮已经得到充分证据的内容不重复询问。上一轮问过但没有回答清楚时，说明为什么仍需验证，并更换角度或要求具体案例，而不是原句重问。
+
+后续轮次优先处理尚未解决的决策阻塞项、前后矛盾、证据边界和更高复杂度下的判断。终面准备不应重新完成一次基础简历筛选。
+
+## 落盘
+
+使用 [面试准备清单模板](../../../05_共享模板/面试准备清单模板.md)，写入：
+
+`02_岗位/<岗位>/候选人/<候选人>/02_面试/<轮次>/面试准备.md`
+
+创建未来轮次目录只表示准备面试，不表示面试已经发生，不更新面试结果，也不写入人工正式结论。
+
+准备文件必须记录本次使用的本地来源路径，并区分岗位标准、材料事实、AI 判断和未验证假设。
+
+## 对话汇报
+
+最终优先告诉用户：
+
+- 本轮唯一核心目标；
+- 时间有限时最值得问的三题；
+- 最需要警惕的回答模式或材料矛盾；
+- 哪个答案最可能改变当前倾向。
+
+不要在对话中复述完整简历，不预写面试官评价，不替用户作出本轮人工结论。
+
+## 写入前自检
+
+- 每个问题是否都能回到岗位决定性标准或关键风险？
+- 是否重复询问已经充分验证的事实？
+- 问题能否区分强弱，而不只是让候选人讲一段漂亮故事？
+- 是否有追问个人贡献、决策、约束、结果和反例的路径？
+- 强弱信号是否可观察，而不是性格标签或表达偏好？
+- 是否明确什么答案会改变当前判断？
+- 问题数量是否符合本轮时长？
+- 是否保留了来源、冲突和未验证边界？
