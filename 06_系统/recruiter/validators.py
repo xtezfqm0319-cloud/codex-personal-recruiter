@@ -65,11 +65,47 @@ def validate_workspace(root: Path) -> list[ValidationIssue]:
         if not raw:
             issues.append(ValidationIssue("ERROR", "MISSING_INTERVIEW_RAW", str(report.relative_to(root)), "面试报告缺少原始纪要"))
         text = report.read_text(encoding="utf-8")
-        for heading in ("## 面试官评价（忠实提取）", "## 人工正式结论", "## 输入追溯"):
-            if heading not in text:
-                issues.append(ValidationIssue("ERROR", "INTERVIEW_STRUCTURE", str(report.relative_to(root)), f"缺少分层字段：{heading}"))
-        if "## AI 独立分析" not in text and "## Codex 独立分析" not in text:
+        heading_groups = (
+            ("## 面试官评价（忠实提取）", "## 二、面试官评价（忠实提取）"),
+            ("## 人工正式结论", "## 十一、人工正式结论"),
+            ("## 输入追溯", "## 十二、输入追溯"),
+        )
+        for alternatives in heading_groups:
+            if not any(heading in text for heading in alternatives):
+                issues.append(ValidationIssue("ERROR", "INTERVIEW_STRUCTURE", str(report.relative_to(root)), f"缺少分层字段：{alternatives[-1]}"))
+        if not any(heading in text for heading in ("## AI 独立分析", "## Codex 独立分析", "## 五、AI 独立分析")):
             issues.append(ValidationIssue("ERROR", "INTERVIEW_STRUCTURE", str(report.relative_to(root)), "缺少分层字段：## AI 独立分析"))
+
+    for brief in (root / "02_岗位").glob("*/候选人/*/03_终面/终面简报.md"):
+        text = brief.read_text(encoding="utf-8")
+        required_headings = (
+            "## 一、一页决策摘要",
+            "## 二、岗位决策证据表",
+            "## 六、材料冲突与可信度",
+            "## 七、岗位胜任、证据可信度与录用可行性",
+            "## 八、终面决定性问题",
+            "## 十一、人工正式结论与分歧",
+            "## 十四、输入材料与追溯",
+        )
+        for heading in required_headings:
+            if heading not in text:
+                issues.append(
+                    ValidationIssue(
+                        "ERROR",
+                        "FINAL_BRIEF_STRUCTURE",
+                        str(brief.relative_to(root)),
+                        f"缺少终面决策字段：{heading}",
+                    )
+                )
+        if "不替代人工最终录用决定" not in text and "不替代最终录用决定" not in text:
+            issues.append(
+                ValidationIssue(
+                    "ERROR",
+                    "FINAL_BRIEF_BOUNDARY",
+                    str(brief.relative_to(root)),
+                    "终面简报缺少人工最终录用决定边界",
+                )
+            )
 
     index = root / "04_全局索引" / "全部候选人.csv"
     if index.exists():

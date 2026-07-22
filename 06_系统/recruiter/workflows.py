@@ -22,6 +22,7 @@ from .frontmatter import read_markdown, update_frontmatter, write_markdown
 
 RECOMMENDATIONS = ("强推", "推", "建议待定", "建议淘汰")
 HARD_CONSTRAINT_STATUSES = ("符合", "存在经确认例外", "不符合", "未验证", "不适用")
+INTERVIEW_INCLINATIONS = ("建议推进", "继续验证", "建议暂缓", "不建议推进")
 
 
 def _replace_section(body: str, heading: str, content: str) -> str:
@@ -45,7 +46,8 @@ def refresh_candidate_overview(path: Path) -> None:
     body = _replace_section(body, "## 三、简历阶段判断", str(data.get("resume_summary", "待 AI 分析。")))
     summaries = data.get("interview_summaries") or []
     interview_text = "\n".join(
-        f"- 第{item.get('round')}轮：{item.get('ai_analysis')}（证据：{item.get('evidence')}；未验证：{item.get('unverified')}）"
+        f"- 第{item.get('round')}轮：{item.get('inclination', '未记录倾向')}｜{item.get('ai_analysis')}"
+        f"（证据：{item.get('evidence')}；未验证：{item.get('unverified')}）"
         for item in sorted(summaries, key=lambda item: item.get("round", 0))
     ) or "暂无。"
     body = _replace_section(body, "## 四、历轮面试结论", interview_text)
@@ -633,10 +635,17 @@ def ingest_interviews(root: Path) -> list[dict[str, str]]:
             report = folder / "面试报告.md"
             if not report.exists():
                 report.write_text(
-                    f"# {candidate}｜第 {round_no} 轮面试报告\n\n## 面试官评价（忠实提取）\n\n待 AI 提取。\n\n"
-                    "## AI 独立分析\n\n待分析。\n\n## 证据\n\n待分析。\n\n## 风险与未验证项\n\n待分析。\n\n"
-                    "## 本轮改变了什么\n\n待分析。\n\n## AI 下一步倾向\n\n待分析。\n\n"
-                    "## 人工正式结论\n\n待确认。\n\n## 输入追溯\n\n"
+                    f"# {candidate}｜第 {round_no} 轮面试报告\n\n## 一、本轮结论摘要\n\n待分析。\n\n"
+                    "## 二、面试官评价（忠实提取）\n\n待 AI 提取。\n\n"
+                    "## 三、本轮问题覆盖\n\n待分析。\n\n"
+                    "## 四、候选人陈述与证据事实\n\n待分析。\n\n"
+                    "## 五、AI 独立分析\n\n待分析。\n\n"
+                    "## 六、本轮改变了什么\n\n待分析。\n\n"
+                    "## 七、与历轮材料的矛盾\n\n待分析。\n\n"
+                    "## 八、风险与未验证项\n\n待分析。\n\n"
+                    "## 九、AI 下一步倾向\n\n待分析。\n\n"
+                    "## 十、已确认个人偏好的影响\n\n待分析。\n\n"
+                    "## 十一、人工正式结论\n\n待确认。\n\n## 十二、输入追溯\n\n"
                     f"- 原始纪要：`{raw.relative_to(root)}`\n- SHA-256：`{digest}`\n",
                     encoding="utf-8",
                 )
@@ -708,9 +717,21 @@ def record_interview_analysis(
     ai_analysis: str,
     evidence: str,
     unverified: str,
+    question_coverage: str = "",
+    strengthened: str = "",
+    weakened: str = "",
+    unchanged: str = "",
+    contradictions: str = "",
+    inclination: str = "继续验证",
+    decision_changer: str = "",
+    next_verification: str = "",
+    next_round_value: str = "",
+    preference_impact: str = "",
 ) -> Path:
     if round_no not in range(1, 6):
         raise ValueError("Interview round must be 1—5")
+    if inclination not in INTERVIEW_INCLINATIONS:
+        raise ValueError(f"Interview inclination must be one of: {', '.join(INTERVIEW_INCLINATIONS)}")
     folder = root / "02_岗位" / position / "候选人" / candidate / "02_面试" / f"{round_no:02d}_第{round_no}轮"
     raws = [p for p in folder.glob("原始纪要.*") if "提取文本" not in p.name]
     if not raws:
@@ -719,37 +740,68 @@ def record_interview_analysis(
     digest = sha256(raw)
     body = f"""# {candidate}｜第 {round_no} 轮面试报告
 
-## 面试官评价（忠实提取）
+## 一、本轮结论摘要
+
+- AI 下一步倾向：{inclination}
+- 决定性理由：{ai_analysis}
+- 最大风险：{unverified}
+- 最可能改变当前倾向的新证据：{decision_changer.strip() or unverified}
+- 是否值得再投入一轮：{next_round_value.strip() or '需根据剩余问题是否重要、可验证且会改变决定判断。'}
+
+## 二、面试官评价（忠实提取）
 
 {interviewer_evaluation}
 
-## AI 独立分析
+## 三、本轮问题覆盖
 
-{ai_analysis}
+{question_coverage.strip() or '本轮无面试准备文件或未提供问题覆盖信息。'}
 
-## 证据
+## 四、候选人陈述与证据事实
 
 {evidence}
 
-## 风险与未验证项
+## 五、AI 独立分析
+
+{ai_analysis}
+
+## 六、本轮改变了什么
+
+### 得到支持的判断
+
+{strengthened.strip() or '本轮未记录足以增强既有判断的非重复证据。'}
+
+### 被削弱或推翻的判断
+
+{weakened.strip() or '本轮未发现。'}
+
+### 保持不变的关键判断
+
+{unchanged.strip() or '未单独记录。'}
+
+## 七、与历轮材料的矛盾
+
+{contradictions.strip() or '本轮未发现需要单独处理的材料矛盾。'}
+
+## 八、风险与未验证项
 
 {unverified}
 
-## 本轮改变了什么
+## 九、AI 下一步倾向
 
-- 得到支持的判断：待 AI 助手根据本轮前假设和实际回答补充。
-- 被削弱或推翻的判断：待 AI 助手补充。
-- 最可能改变下一步倾向的未解决问题：{unverified}
+- 倾向：{inclination}
+- 为什么：{ai_analysis}
+- 若继续，下一轮只需验证：{next_verification.strip() or unverified}
+- 可能反转倾向的条件：{decision_changer.strip() or unverified}
 
-## AI 下一步倾向
+## 十、已确认个人偏好的影响
 
-- 待 AI 助手基于本轮新增证据明确为推进、继续验证、暂缓或不建议推进，并说明理由。
+{preference_impact.strip() or '未使用个人偏好，仅按岗位画像和本轮证据判断。'}
 
-## 人工正式结论
+## 十一、人工正式结论
 
 待确认。此处不得由 AI 助手替代用户写入。
 
-## 输入追溯
+## 十二、输入追溯
 
 - 原始纪要：`{raw.relative_to(root)}`
 - SHA-256：`{digest}`
@@ -759,7 +811,22 @@ def record_interview_analysis(
     overview = root / "02_岗位" / position / "候选人" / candidate / "00_候选人总览.md"
     data, _ = read_markdown(overview)
     summaries = list(data.get("interview_summaries") or [])
-    entry = {"round": round_no, "ai_analysis": ai_analysis, "evidence": evidence, "unverified": unverified}
+    entry = {
+        "round": round_no,
+        "ai_analysis": ai_analysis,
+        "evidence": evidence,
+        "unverified": unverified,
+        "question_coverage": question_coverage,
+        "strengthened": strengthened,
+        "weakened": weakened,
+        "unchanged": unchanged,
+        "contradictions": contradictions,
+        "inclination": inclination,
+        "decision_changer": decision_changer,
+        "next_verification": next_verification,
+        "next_round_value": next_round_value,
+        "preference_impact": preference_impact,
+    }
     summaries = [item for item in summaries if item.get("round") != round_no] + [entry]
     update_frontmatter(overview, current_stage=f"第{round_no}轮已分析", updated_at=today(), interview_summaries=summaries)
     refresh_candidate_overview(overview)
@@ -767,22 +834,73 @@ def record_interview_analysis(
     return report
 
 
-def set_interview_decision(root: Path, position: str, candidate: str, round_no: int, decision: str) -> Path:
+def set_interview_decision(
+    root: Path,
+    position: str,
+    candidate: str,
+    round_no: int,
+    decision: str,
+    reason: str = "",
+    confirmed_change: bool = False,
+) -> Path:
     overview = root / "02_岗位" / position / "候选人" / candidate / "00_候选人总览.md"
     data, _ = read_markdown(overview)
     current = data.get("interview_human_decisions", {}) or {}
     key = str(round_no)
+    old_decision = current.get(key)
     if key in current and current[key] != decision:
-        add_pending(root, "修改人工面试结论", f"{candidate}｜{position}｜第{round_no}轮", f"当前为“{current[key]}”，拟改为“{decision}”", "用户确认后修改")
-        raise PermissionError("Queued pending confirmation instead of overwriting interview decision")
+        subject = f"{candidate}｜{position}｜第{round_no}轮"
+        if not confirmed_change:
+            reason_note = f"；用户理由：{reason.strip()}" if reason.strip() else ""
+            add_pending(
+                root,
+                "修改人工面试结论",
+                subject,
+                f"当前为“{current[key]}”，拟改为“{decision}”{reason_note}",
+                "用户再次明确确认后修改",
+            )
+            raise PermissionError("Queued pending confirmation instead of overwriting interview decision")
+        pending_id = resolve_pending(
+            root,
+            "修改人工面试结论",
+            subject,
+            f"第{round_no}轮人工结论已由“{current[key]}”修改为“{decision}”",
+            required_text=f"当前为“{current[key]}”，拟改为“{decision}”",
+        )
+        if pending_id is None:
+            raise PermissionError("No matching pending confirmation exists for this interview-decision change")
     current[key] = decision
-    update_frontmatter(overview, interview_human_decisions=current, current_stage=f"第{round_no}轮-{decision}", updated_at=today())
+    reasons = data.get("interview_human_decision_reasons", {}) or {}
+    if reason.strip():
+        reasons[key] = reason.strip()
+    elif old_decision is not None and old_decision != decision:
+        reasons.pop(key, None)
+    update_frontmatter(
+        overview,
+        interview_human_decisions=current,
+        interview_human_decision_reasons=reasons,
+        current_stage=f"第{round_no}轮-{decision}",
+        updated_at=today(),
+    )
     refresh_candidate_overview(overview)
     report = root / "02_岗位" / position / "候选人" / candidate / "02_面试" / f"{round_no:02d}_第{round_no}轮" / "面试报告.md"
     text = report.read_text(encoding="utf-8")
-    text = re.sub(r"(## 人工正式结论\n\n).*?(?=\n## 输入追溯)", rf"\1{decision}\n", text, flags=re.DOTALL)
+    text = re.sub(
+        r"(## (?:十一、)?人工正式结论\n\n).*?(?=\n## (?:十二、)?输入追溯)",
+        rf"\1{decision}\n",
+        text,
+        flags=re.DOTALL,
+    )
     report.write_text(text, encoding="utf-8")
-    log_action(root, "interview.decision_recorded", candidate=candidate, position=position, round=round_no, decision=decision)
+    log_action(
+        root,
+        "interview.decision_recorded",
+        candidate=candidate,
+        position=position,
+        round=round_no,
+        decision=decision,
+        reason=reason.strip(),
+    )
     return report
 
 
@@ -797,77 +915,142 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
     preparations = sorted(candidate_dir.glob("02_面试/*/面试准备.md"))
     if not reports:
         raise ValueError("Final brief requires at least one interview report")
-    evidence_sections = []
-    for report in reports:
-        evidence_sections.append(f"### {report.parent.name}\n\n来源：`{report.relative_to(root)}`\n\n{report.read_text(encoding='utf-8')}")
+    interview_summaries = overview.get("interview_summaries") or []
+    interview_decisions = overview.get("interview_human_decisions") or {}
+    interview_reasons = overview.get("interview_human_decision_reasons") or {}
+    change_lines = []
+    for item in sorted(interview_summaries, key=lambda value: value.get("round", 0)):
+        round_no = str(item.get("round", ""))
+        decision = interview_decisions.get(round_no, "待确认")
+        reason = interview_reasons.get(round_no, "")
+        reason_text = f"｜理由：{reason}" if reason else ""
+        change_lines.append(
+            f"- 第{round_no}轮：AI 倾向 {item.get('inclination', '未记录')}｜"
+            f"判断：{item.get('ai_analysis', '未记录')}｜"
+            f"证据：{item.get('evidence', '未记录')}｜"
+            f"未验证：{item.get('unverified', '未记录')}｜"
+            f"人工结论：{decision}{reason_text}"
+        )
+    change_summary = "\n".join(change_lines) or "- 待 AI 助手对照历轮原始纪要和报告补充。"
     sources = overview.get("source_files") or []
     source_list = "\n".join(f"- `{item.get('path')}`｜SHA-256 `{item.get('sha256')}`" for item in sources if isinstance(item, dict))
+    resume_analysis = candidate_dir / "01_简历分析.md"
+    comparison = root / "02_岗位" / position / "候选人比较.md"
+    preference_file = root / "00_公司认知" / "个人招聘判断偏好.md"
+    generated_sources = [position_file, overview_file]
+    if resume_analysis.exists():
+        generated_sources.append(resume_analysis)
+    if comparison.exists():
+        generated_sources.append(comparison)
+    generated_sources.extend(preparations)
+    generated_sources.extend(reports)
+    if preference_file.exists():
+        generated_sources.append(preference_file)
+    generated_source_list = "\n".join(f"- `{path.relative_to(root)}`" for path in generated_sources)
     brief_dir = candidate_dir / "03_终面"
     brief_dir.mkdir(parents=True, exist_ok=True)
     brief = brief_dir / "终面简报.md"
-    body = f"""# {candidate}｜{position}｜终面前简报
+    body = f"""# {candidate}｜{position}｜终面决策简报
 
-## 一、结论摘要
+## 一、一页决策摘要
 
-- 倾向建议：待 AI 助手基于完整材料明确为“建议进入录用讨论 / 谨慎推进 / 继续验证 / 不建议推进”之一
-- 三条决定性理由：待 AI 助手补充。
+- AI 倾向：待 AI 助手基于完整材料明确为“建议进入录用讨论 / 谨慎推进 / 继续验证 / 不建议推进”之一。
+- 倾向含义：待 AI 助手说明当前是证据足够、需接受风险，还是仍有录用阻塞项。
+- 决定性理由：待 AI 助手压缩为一至三条。
 - 最大下行风险：{overview.get('resume_risk', '未记录')}
+- 终面是否值得：待 AI 助手根据未解问题的重要性、可验证性和决策价值判断。
 - 最可能改变当前倾向的新证据：{overview.get('resume_unverified', '未记录')}
-- AI 简历建议：{overview.get('ai_recommendation', '未记录')}
-- 人工筛选结论：{overview.get('human_decision', '未记录')}
-- 当前阶段：{overview.get('current_stage', '未记录')}
-- 简历业务摘要：{overview.get('resume_summary', '未记录')}
 
-## 二、材料事实（按来源陈述）
+## 二、岗位决策证据表
+
+| 岗位判断项 | 当前结论 | 最强支持证据 | 最强反证或边界 | 证据状态 | 对录用判断的影响 |
+| --- | --- | --- | --- | --- | --- |
+| 待对照正式岗位画像逐项补充 | {overview.get('resume_summary', '待分析')} | {overview.get('resume_evidence', '未记录')} | {overview.get('resume_risk', '未记录')} | 待综合历轮证据 | 待判断 |
+
+## 三、候选人最值得录用的价值
+
+- 待 AI 助手将最关键的业务价值、岗位任务、证据和边界连接起来。
+
+## 四、最大下行风险
+
+- 当前线索：{overview.get('resume_risk', '未记录')}
+- 可能后果、发生条件和可降低方式：待 AI 助手补充。
+
+## 五、历轮判断发生了什么变化
+
+{change_summary}
+
+## 六、材料冲突与可信度
+
+- 待 AI 助手回到原始材料，保留冲突双方的路径、轮次、口径解释和决策影响。
+
+## 七、岗位胜任、证据可信度与录用可行性
+
+### 岗位胜任
+
+- 待 AI 助手基于正式岗位画像判断。
+
+### 证据可信度
+
+- 待 AI 助手区分独立证据、候选人主张和重复叙述。
+
+### 录用可行性
+
+- HR 补充：{hr_notes or '未提供，保留为待确认。'}
+- 待 AI 助手区分已确认信息、候选人主张和待确认约束。
+
+## 八、终面决定性问题
+
+- 待 AI 助手只保留会改变录用倾向的问题，并补充追问、强弱证据与判断变化条件。
+
+## 九、时间不足时必问的三题
+
+1. 待补充。
+2. 待补充。
+3. 待补充。
+
+## 十、已明确、不建议重复询问的内容
+
+- 待 AI 助手基于历轮已充分证据补充。
+
+## 十一、人工正式结论与分歧
+
+- 人工筛选结论：{overview.get('human_decision', '未记录')}
+- 人工筛选理由：{overview.get('human_decision_reason', '未记录')}
+- 历轮人工面试结论：{', '.join(f'第{key}轮：{value}' for key, value in interview_decisions.items()) or '未记录'}
+- AI 倾向与人工结论的分歧：待 AI 助手说明。
+
+## 十二、已确认个人偏好的影响
+
+- 来源：`00_公司认知/个人招聘判断偏好.md`
+- 待 AI 助手说明具体使用了哪些已确认偏好、影响了什么；没有适用偏好时明确写“未使用”。
+
+## 十三、事实、判断与未验证项清单
+
+### 已确认事实
 
 - 候选人：{candidate}
 - 岗位：{position}
-- 硬性条件记录：{overview.get('hard_constraint_status', '未验证')}（该字段只表示当前材料判断，不等于后续核验已完成）
-- 以上状态来自：`{overview_file.relative_to(root)}`；岗位标准来自：`{position_file.relative_to(root)}`。
+- 当前阶段：{overview.get('current_stage', '未记录')}
 
-## 三、岗位匹配判断
+### 候选人主张
 
-- 支持证据：{overview.get('resume_evidence', '未记录')}
-- 风险：{overview.get('resume_risk', '未记录')}
-- 说明：这是 AI 助手基于现有材料的判断，不是事实或录用结论。
+- 待 AI 助手从原始材料中忠实提取。
 
-## 四、历轮面试证据
+### AI 判断
 
-{chr(10).join(evidence_sections)}
+- AI 简历建议：{overview.get('ai_recommendation', '未记录')}
 
-## 五、HR 补充信息
-
-{hr_notes or '未提供。'}
-
-## 六、材料冲突
-
-- 当前未自动识别到结构化冲突；终面需核对各材料之间不一致的时间、职责边界和结果归因。
-
-## 七、风险与未验证项
+### 未验证项
 
 - {overview.get('resume_unverified', '未记录')}
-- 面试报告中的“风险与未验证项”仍需终面逐项验证。
 
-## 八、终面建议验证问题
-
-- 请围绕关键经历的个人职责、决策依据、可量化结果和复盘追问。
-- 请验证材料中尚未确认的任职时间、责任边界、团队规模和业绩归因。
-
-## 九、倾向性判断
-
-待 AI 助手根据全部证据给出清晰倾向。是否录用必须由人基于终面新增证据决定。本简报不替代最终录用决定。
-
-## 十、已确认个人偏好的影响
-
-- 来源：`00_公司认知/个人招聘判断偏好.md`
-- 待 AI 助手说明具体使用了哪些已确认偏好；没有适用偏好时明确写“未使用”。
-
-## 十一、输入材料清单
+## 十四、输入材料与追溯
 
 {source_list}
-- `{position_file.relative_to(root)}`
-- `{overview_file.relative_to(root)}`
-{chr(10).join(f'- `{path.relative_to(root)}`' for path in preparations)}
+{generated_source_list}
+
+本简报提供 AI 证据判断和终面准备，不替代人工最终录用决定。
 """
     brief.write_text(body.rstrip() + "\n", encoding="utf-8")
     update_frontmatter(overview_file, current_stage="终面待进行", updated_at=today(), final_brief=str(brief.relative_to(root)))

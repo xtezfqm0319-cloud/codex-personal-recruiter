@@ -1,16 +1,16 @@
-{"time": "2026-07-21T10:04:30+08:00", "action": "workspace.init"}
-{"time": "2026-07-21T10:04:30+08:00", "action": "position.created", "position": "企业AI产品经理", "position_id": "POS-2026-001"}
-{"time": "2026-07-21T10:04:30+08:00", "action": "history.searched", "query": "企业AI产品经理", "position": "企业AI产品经理", "count": 0}
-{"time": "2026-07-21T10:04:30+08:00", "action": "resume.ingested", "candidate": "陈曦", "position": "企业AI产品经理", "path": "02_岗位/企业AI产品经理/候选人/陈曦/陈曦-企业AI产品经理.txt", "sha256": "7ca8f5e2d98ee4ecde3a5c6491a6bd308eb2e96636e39cab0ddb189481abf6c7", "extraction_method": "直接读取", "extraction_status": "通过", "ocr_pages": [], "unresolved_pages": []}
-{"time": "2026-07-21T10:04:30+08:00", "action": "resume.analysis_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "recommendation": "强推"}
-{"time": "2026-07-21T10:04:30+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 0}
-{"time": "2026-07-21T10:04:30+08:00", "action": "screening.confirmed", "candidate": "陈曦", "position": "企业AI产品经理", "decision": "推进"}
-{"time": "2026-07-21T10:04:30+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 0}
-{"time": "2026-07-21T10:04:30+08:00", "action": "interview.ingested", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1, "sha256": "3d6daf3bd6b1607d04e0e4b6777c37e5494e9e015f90f858858bd9826433cc4d", "extraction_method": "直接读取", "extraction_status": "通过", "ocr_pages": [], "unresolved_pages": []}
-{"time": "2026-07-21T10:04:30+08:00", "action": "interview.analysis_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1}
-{"time": "2026-07-21T10:04:30+08:00", "action": "interview.decision_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1, "decision": "通过，进入终面"}
-{"time": "2026-07-21T10:04:30+08:00", "action": "final_brief.generated", "candidate": "陈曦", "position": "企业AI产品经理", "path": "02_岗位/企业AI产品经理/候选人/陈曦/03_终面/终面简报.md"}
-{"time": "2026-07-21T10:04:30+08:00", "action": "candidate.archived", "candidate": "陈曦", "position": "企业AI产品经理", "result": "HC暂停，未录用；面试通过，人才保留", "reusable": true, "path": "03_简历库/企业AI产品经理/陈曦"}
-{"time": "2026-07-21T10:04:30+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 1}
-{"time": "2026-07-21T10:04:30+08:00", "action": "history.searched", "query": "企业 AI 知识助手", "position": "", "count": 1}
-{"time": "2026-07-21T10:04:31+08:00", "action": "position.calibration_generated", "position": "企业AI产品经理", "records": 1}
+{"time": "2026-07-22T14:49:39+08:00", "action": "workspace.init"}
+{"time": "2026-07-22T14:49:39+08:00", "action": "position.created", "position": "企业AI产品经理", "position_id": "POS-2026-001"}
+{"time": "2026-07-22T14:49:39+08:00", "action": "history.searched", "query": "企业AI产品经理", "position": "企业AI产品经理", "count": 0}
+{"time": "2026-07-22T14:49:39+08:00", "action": "resume.ingested", "candidate": "陈曦", "position": "企业AI产品经理", "path": "02_岗位/企业AI产品经理/候选人/陈曦/陈曦-企业AI产品经理.txt", "sha256": "dd82abce7b49d6e17b2d814892629f9c4adab248e093128e89ea4ee691c2b5d1", "extraction_method": "直接读取", "extraction_status": "通过", "ocr_pages": [], "unresolved_pages": []}
+{"time": "2026-07-22T14:49:39+08:00", "action": "resume.analysis_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "recommendation": "强推"}
+{"time": "2026-07-22T14:49:39+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 0}
+{"time": "2026-07-22T14:49:39+08:00", "action": "screening.confirmed", "candidate": "陈曦", "position": "企业AI产品经理", "decision": "推进", "reason": ""}
+{"time": "2026-07-22T14:49:39+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 0}
+{"time": "2026-07-22T14:49:39+08:00", "action": "interview.ingested", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1, "sha256": "3d6daf3bd6b1607d04e0e4b6777c37e5494e9e015f90f858858bd9826433cc4d", "extraction_method": "直接读取", "extraction_status": "通过", "ocr_pages": [], "unresolved_pages": []}
+{"time": "2026-07-22T14:49:39+08:00", "action": "interview.analysis_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1}
+{"time": "2026-07-22T14:49:39+08:00", "action": "interview.decision_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1, "decision": "通过，进入终面", "reason": ""}
+{"time": "2026-07-22T14:49:39+08:00", "action": "final_brief.generated", "candidate": "陈曦", "position": "企业AI产品经理", "path": "02_岗位/企业AI产品经理/候选人/陈曦/03_终面/终面简报.md"}
+{"time": "2026-07-22T14:49:39+08:00", "action": "candidate.archived", "candidate": "陈曦", "position": "企业AI产品经理", "result": "HC暂停，未录用；面试通过，人才保留", "reusable": true, "path": "03_简历库/企业AI产品经理/陈曦"}
+{"time": "2026-07-22T14:49:39+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 1}
+{"time": "2026-07-22T14:49:39+08:00", "action": "history.searched", "query": "企业 AI 知识助手", "position": "", "count": 1}
+{"time": "2026-07-22T14:49:39+08:00", "action": "position.calibration_generated", "position": "企业AI产品经理", "records": 1}

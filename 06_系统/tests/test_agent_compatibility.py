@@ -101,4 +101,77 @@ def test_confirm_screening_has_detailed_chinese_contract() -> None:
         assert heading in reference
 
 
+def test_prepare_interview_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/prepare-interview/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/prepare-interview/references/面试准备判断与问题设计规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+    template = (PROJECT_ROOT / "05_共享模板/面试准备清单模板.md").read_text(encoding="utf-8")
+
+    assert "[面试准备判断与问题设计规范](references/面试准备判断与问题设计规范.md)" in skill
+    assert "本轮结束后，用户需要做什么决定" in skill
+    assert "时间有限时必问的三题" in skill
+    for heading in (
+        "## 3. 定义本轮决策任务",
+        "## 5. 选择高信息价值问题",
+        "## 8. 追问路径的设计",
+        "## 13. 偏好、偏差与公平边界",
+        "## 17. 写入前自检",
+    ):
+        assert heading in reference
+    for field in ("本轮唯一核心目标", "具体证据缺口或冲突", "对当前判断的影响", "面试官需要原样记录"):
+        assert field in template
+
+
+def test_analyze_interview_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/analyze-interview/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/analyze-interview/references/面试纪要分析与多轮证据规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+    template = (PROJECT_ROOT / "05_共享模板/面试报告模板.md").read_text(encoding="utf-8")
+
+    assert "[面试纪要分析与多轮证据规范](references/面试纪要分析与多轮证据规范.md)" in skill
+    assert "面试官评价、候选人陈述、可用证据、AI 独立判断和人工正式结论" in skill
+    assert "--question-coverage" in skill
+    assert "--decision-changer" in skill
+    for heading in (
+        "## 3. 五层信息分离",
+        "## 6. 对照面试准备检查问题覆盖",
+        "## 8. 本轮变化账本",
+        "## 9. 多轮证据累积与去重",
+        "## 13. 判断下一轮是否值得",
+        "## 17. 写入前自检",
+    ):
+        assert heading in reference
+    for field in ("本轮问题覆盖", "候选人陈述与证据事实", "与历轮材料的矛盾", "人工正式结论"):
+        assert field in template
+
+
+def test_generate_final_brief_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/generate-final-brief/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/generate-final-brief/references/终面简报规则.md"
+    reference = reference_path.read_text(encoding="utf-8")
+    template = (PROJECT_ROOT / "05_共享模板/终面简报模板.md").read_text(encoding="utf-8")
+
+    assert "[终面决策简报判断与输出规范](references/终面简报规则.md)" in skill
+    assert "分开三个决策维度" in skill
+    assert "谨慎推进" in skill and "继续验证" in skill
+    assert "时间不足时的必问三题" in skill
+    for heading in (
+        "## 5. 建立决策证据表",
+        "## 8. 岗位胜任、证据可信度与录用可行性",
+        "## 11. 四类 AI 倾向",
+        "## 13. 终面是否还值得",
+        "## 14. 终面必问项设计",
+        "## 19. 写入前自检",
+    ):
+        assert heading in reference
+    for field in (
+        "岗位决策证据表",
+        "最大下行风险",
+        "历轮判断发生了什么变化",
+        "时间不足时必问的三题",
+        "人工正式结论与分歧",
+    ):
+        assert field in template
+
+
 SKILL_REFERENCE_PATTERN = re.compile(r"\$[a-z][a-z0-9-]*")

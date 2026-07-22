@@ -1,4 +1,4 @@
 interface:
   display_name: "面试准备"
-  short_description: "根据候选人证据缺口，准备有针对性的面试问题、追问和观察信号"
-  default_prompt: "请使用 $prepare-interview，为这名候选人准备下一轮面试。"
+  short_description: "围绕决策缺口设计候选人专属问题和追问路径"
+  default_prompt: "使用 $prepare-interview，为这名候选人的下一轮面试生成可直接使用的准备方案，优先验证最可能改变当前判断的问题。"

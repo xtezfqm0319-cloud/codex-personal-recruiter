@@ -1,15 +1,142 @@
 ---
 name: generate-final-brief
-description: Generate an evidence-traceable pre-final-interview brief from a position, resume, screening analysis, all interview materials, HR notes, and candidate status. Use when preparing a candidate for final interview or decision discussion.
+description: 读取正式岗位画像、候选人简历、筛选判断、历轮面试证据、人工结论和 HR 补充信息，生成可追溯、可直接用于终面或录用讨论的决策简报。适用于为指定候选人准备终面、判断是否已具备进入录用讨论的证据、压缩多轮面试信息、设计终面决定性问题，或在决策会前梳理优势、风险、矛盾、录用条件和反转证据。
 ---
 
-# Generate Final Brief
+# 生成终面决策简报
 
-1. Read [终面简报规则.md](references/终面简报规则.md) completely.
-2. Load confirmed personal recruiting preferences, the formal position, candidate overview, original resume/extraction, resume analysis, every interview preparation file, raw note and report, plus HR additions.
-3. Resolve identity and source conflicts before writing. Do not silently choose between contradictory materials.
-4. Run `generate-final-brief` to create the traceable evidence bundle, then refine its narrative in place following the reference rules without changing source hashes or human conclusions.
-5. Every key conclusion must cite a local input path or nearby evidence. Label facts, judgments, preference influence, and unverified items.
-6. Give one clear tendency: `建议进入录用讨论`, `谨慎推进`, `继续验证`, or `不建议推进`. Explain the three decisive reasons, the largest downside, and the single new fact that could change the tendency. Never write the formal hiring decision.
-7. In conversation, lead with the tendency and decision-changing unknown; do not summarize the whole resume again.
-8. Run `validate`.
+## 目标
+
+终面简报不是简历缩写，也不是历轮面试的顺序摘要。它要将分散材料压缩成一个可执行的决策界面，回答：
+
+- 候选人为什么值得或不值得进入录用讨论；
+- 当前判断依赖哪些相互独立的关键证据；
+- 最大下行风险是什么；
+- 哪些问题已经清楚，不需要终面重复询问；
+- 终面只需要获得哪些新证据就能做决定；
+- 当前是可以讨论录用、需要带条件谨慎推进，还是仍被证据缺口阻塞。
+
+执行本 Skill 时，必须完整读取并遵守 [终面决策简报判断与输出规范](references/终面简报规则.md)。
+
+## 必读材料
+
+1. `AGENTS.md`；
+2. `00_公司认知/通用招聘标准.md`；
+3. `00_公司认知/个人招聘判断偏好.md`，只应用已确认偏好；
+4. 正式 `岗位.md`，包括准入、排序、证据和验证规则；
+5. 候选人总览、原始简历、提取文本、质量报告和简历分析；
+6. 岗位候选人比较，若存在；
+7. 每一轮面试准备、原始纪要、面试报告和人工正式结论；
+8. HR 补充的明确信息，包括可到岗时间、预算匹配、求职动机或其他已核实约束；
+9. 已存在的终面简报，若本次是更新而不是首次生成。
+
+关键判断不得只引用 AI 旧报告。有疑义、冲突或录用决策权重较高时，回到原始简历或原始面试纪要。
+
+## 生成前门槛
+
+至少存在一份已建档面试报告才能生成终面简报。候选人、岗位、材料完整度或轮次无法确认时，先进入待确认，不生成看似完整的决策结论。
+
+如果用户需要的是下一轮普通面试方案，而不是终面或录用讨论简报，改用 `$prepare-interview`。
+
+## 建立决策证据表
+
+按正式岗位的选人规则，将关键判断项分为：
+
+- 已有充分支持；
+- 有部分证据，但边界不清；
+- 关键主张尚未验证；
+- 已出现反证或被削弱；
+- 材料之间存在冲突；
+- 对本次录用决策影响较低。
+
+每项必须包含：岗位标准、当前结论、最强支持证据、最强反证或边界、证据来源和对录用判断的影响。
+
+同一项目故事在简历和多轮面试中重复出现，仍只是一条证据链。只有新的个人行动、决策依据、结果口径、反例或独立来源才会增加证据量。
+
+## 分开三个决策维度
+
+1. 岗位胜任判断：证据是否支持关键任务和能力；
+2. 证据可信度：结论是否依赖未核实主张、重复叙述或冲突口径；
+3. 录用可行性：到岗、预算、动机、职责预期或其他实际约束是否可解决。
+
+能力证据充分但录用条件未闭环，不等于能力不足；流程已走到终面，也不等于已达到录用标准。
+
+## 处理人工结论和冲突
+
+- 人工筛选或面试通过是流程事实，不是对所有能力的证明；
+- 保留每一个人工正式结论和明确理由，不得为了与 AI 倾向一致而改写；
+- 材料冲突时保留双方原意、路径和轮次，先检查时间、范围、统计口径和责任边界；
+- 后续新证据可以加强、限定或推翻早期判断；
+- 只把无法解释且会改变录用判断的冲突放入终面必问项。
+
+## 形成 AI 倾向
+
+只使用以下四类：
+
+- `建议进入录用讨论`：核心标准已有足够证据，不存在阻止录用讨论的未验证项；
+- `谨慎推进`：已可以讨论录用，但存在需明确接受、限定职责或设置条件的下行风险；
+- `继续验证`：某个可通过终面获得的关键新证据仍然阻止录用判断；
+- `不建议推进`：已有证据显示关键标准未达到、核心证据链不可信，或继续终面的信息价值很低。
+
+`谨慎推进` 和 `继续验证` 不得混用：前者是“证据已足够，要不要接受这个风险”；后者是“证据还不足，需要再得到一个答案”。
+
+倾向必须写明：三条以内的决定性理由、最大下行风险、终面是否值得、最可能改变倾向的新证据。
+
+## 设计终面必问项
+
+只保留能改变录用判断、可在终面中得到有效新证据的问题。默认不超过五个主问题，并标出时间不足时的必问三题。
+
+每个问题都要写明：
+
+- 对应哪个录用阻塞项、风险或冲突；
+- 为什么历轮材料还没有回答；
+- 强证据、弱证据和反证分别是什么；
+- 回答模糊时应追问哪一个事实；
+- 什么答案会让当前倾向上调、下调或保持。
+
+不重复已获得充分证据的基础经历，不把“再聊聊动机”或“再深挖项目”当作可执行问题。
+
+## 落盘
+
+先运行：
+
+```bash
+python -m recruiter --root . generate-final-brief \
+  --position "岗位" \
+  --candidate "候选人" \
+  --hr-notes "HR 已确认的补充信息"
+```
+
+脚本创建来源可追溯的终面简报骨架。随后按参考规范重写决策内容，但不得改写来源路径、SHA-256、候选人原话或人工正式结论。
+
+重写后必须使用共享模板的完整结构，每个关键结论附近标注本地来源路径和具体证据。未提供的 HR 信息保留为未确认，不根据简历或印象补齐。
+
+## 完成与汇报
+
+运行：
+
+```bash
+python -m recruiter --root . rebuild-index
+python -m recruiter --root . validate
+```
+
+对话中优先告诉用户：当前 AI 倾向、三条以内的决定性理由、最大下行风险、终面是否还有决策价值、必问三题，以及哪项新证据最可能改变当前倾向。
+
+不重述整份简历或逐轮复述面试。不替用户写入最终录用决定。
+
+## 写入前自检
+
+- 简报是否真正支持一个决策，而不是材料汇总？
+- 岗位胜任、证据可信度和录用可行性是否分开？
+- 每个关键判断是否有本地路径和具体证据？
+- 候选人主张是否被误写成已确认事实？
+- 同一项目的重复叙述是否被误算为多份证据？
+- 人工结论是否被忠实保留，没有被 AI 倾向覆盖？
+- 材料冲突是否保留双方来源和口径？
+- `谨慎推进` 和 `继续验证` 是否按“接受风险”与“补足证据”正确区分？
+- 终面问题是否都会改变判断，而不是普通了解？
+- 是否已删除历轮面试已充分回答的重复问题？
+- 倾向是否包含反转条件和最大下行风险？
+- 是否只应用了已确认个人偏好？
+- 是否没有使用分数、百分比或伪精确概率？
+- 是否没有替用户写入最终录用结论？

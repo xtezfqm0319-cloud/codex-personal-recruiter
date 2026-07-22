@@ -1,4 +1,4 @@
 interface:
-  display_name: "生成终面简报"
-  short_description: "Generate an evidence-traceable final interview brief"
-  default_prompt: "Use $generate-final-brief to prepare the final interview brief."
+  display_name: "生成终面决策简报"
+  short_description: "将历轮证据压缩成可执行的终面决策界面"
+  default_prompt: "使用 $generate-final-brief 为指定候选人生成终面决策简报，给出明确倾向、决定性证据、最大下行风险和只有终面仍需验证的问题。"
