@@ -59,6 +59,23 @@ def validate_workspace(root: Path) -> list[ValidationIssue]:
             issues.append(ValidationIssue("ERROR", "MISSING_EXCEPTION", str(overview.relative_to(root)), "硬性条件例外缺少具体理由"))
         if recommendation not in {None, "", "待分析"} and not str(data.get("resume_evidence", "")).strip():
             issues.append(ValidationIssue("ERROR", "MISSING_EVIDENCE", str(overview.relative_to(root)), "AI简历判断缺少证据"))
+        archive_summary = data.get("archive_summary")
+        if archive_summary:
+            summary_path = root / str(archive_summary)
+            if not summary_path.exists():
+                issues.append(ValidationIssue("ERROR", "MISSING_ARCHIVE_SUMMARY", str(overview.relative_to(root)), "归档候选人缺少归档摘要"))
+            else:
+                summary_text = summary_path.read_text(encoding="utf-8")
+                for heading in ("## 一、人工正式结果", "## 二、能力判断与结果边界", "## 三、未来复用判断", "## 七、输入材料与追溯"):
+                    if heading not in summary_text:
+                        issues.append(
+                            ValidationIssue(
+                                "ERROR",
+                                "ARCHIVE_SUMMARY_STRUCTURE",
+                                str(summary_path.relative_to(root)),
+                                f"缺少归档判断字段：{heading}",
+                            )
+                        )
 
     for report in (root / "02_岗位").glob("*/候选人/*/02_面试/*/面试报告.md"):
         raw = [p for p in report.parent.glob("原始纪要.*") if "提取文本" not in p.name]

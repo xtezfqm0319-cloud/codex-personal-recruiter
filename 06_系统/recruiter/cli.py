@@ -114,7 +114,21 @@ def build_parser() -> argparse.ArgumentParser:
     close.add_argument("--position", required=True)
     close.add_argument("--candidate", required=True)
     close.add_argument("--result", required=True)
-    close.add_argument("--reusable", action="store_true")
+    close.add_argument("--reusable", action="store_true", help="legacy compatibility flag; prefer --reuse-level")
+    close.add_argument("--closure-category", default="")
+    close.add_argument("--closure-reason", default="")
+    close.add_argument("--reuse-level", default="", choices=["优先复用", "有条件复用", "暂不主动复用", "不建议复用"])
+    close.add_argument("--validated-strengths", default="")
+    close.add_argument("--weakened-findings", default="")
+    close.add_argument("--unverified-findings", default="")
+    close.add_argument("--capability-boundary", default="")
+    close.add_argument("--reuse-targets", default="")
+    close.add_argument("--reuse-conditions", default="")
+    close.add_argument("--reuse-risks", default="")
+    close.add_argument("--future-verification", default="")
+    close.add_argument("--decision-changer", default="")
+    close.add_argument("--lesson", default="")
+    close.add_argument("--preference-impact", default="")
 
     search = sub.add_parser("search-history", help="read-only keyword search of archived candidates")
     search.add_argument("--query", required=True)
@@ -229,7 +243,27 @@ def main(argv: list[str] | None = None) -> int:
             rebuild_indexes(root)
             _print({"status": "ok", "path": path.relative_to(root)})
         elif args.command == "close-candidate":
-            path = close_candidate(root, args.position, args.candidate, args.result, args.reusable)
+            path = close_candidate(
+                root,
+                args.position,
+                args.candidate,
+                args.result,
+                args.reusable,
+                args.closure_category,
+                args.closure_reason,
+                args.reuse_level,
+                args.validated_strengths,
+                args.weakened_findings,
+                args.unverified_findings,
+                args.capability_boundary,
+                args.reuse_targets,
+                args.reuse_conditions,
+                args.reuse_risks,
+                args.future_verification,
+                args.decision_changer,
+                args.lesson,
+                args.preference_impact,
+            )
             rebuild_indexes(root)
             _print({"status": "ok", "path": path.relative_to(root)})
         elif args.command == "search-history":

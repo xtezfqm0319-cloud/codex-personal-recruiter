@@ -174,4 +174,68 @@ def test_generate_final_brief_has_detailed_chinese_contract() -> None:
         assert field in template
 
 
+def test_close_candidate_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/close-candidate/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/close-candidate/references/候选人结束归档判断与输出规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+    template = (PROJECT_ROOT / "05_共享模板/候选人归档摘要模板.md").read_text(encoding="utf-8")
+
+    assert "[候选人结束归档判断与输出规范](references/候选人结束归档判断与输出规范.md)" in skill
+    assert "人工正式结果" in skill
+    assert "优先复用" in skill and "不建议复用" in skill
+    assert "--capability-boundary" in skill
+    for heading in (
+        "## 5. 四层结论分离",
+        "## 7. 结果不能推出什么",
+        "## 8. 四级复用判断",
+        "## 13. 归档摘要格式",
+        "## 17. 写入前自检",
+    ):
+        assert heading in reference
+    for field in ("人工正式结果", "能力判断与结果边界", "未来复用判断", "再次评估的最小验证动作"):
+        assert field in template
+
+
+def test_search_history_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/search-history/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/search-history/references/历史人才检索与复用判断规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+    template = (PROJECT_ROOT / "05_共享模板/历史人才复用建议模板.md").read_text(encoding="utf-8")
+
+    assert "[历史人才检索与复用判断规范](references/历史人才检索与复用判断规范.md)" in skill
+    assert "CLI 命中只用于召回" in skill
+    assert "旧岗位上的“强推、淘汰、面试通过”均不能直接继承" in skill
+    for heading in (
+        "## 6. 召回不等于匹配",
+        "## 10. 旧结论的有效范围",
+        "## 13. 四类当前复用优先级",
+        "## 14. 多人比较与排序",
+        "## 19. 写入前自检",
+    ):
+        assert heading in reference
+    for field in ("本次查询与边界", "最强反证或边界", "原岗位与当前需求的关键差异", "最小下一步"):
+        assert field in template
+
+
+def test_calibrate_position_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/calibrate-position/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/calibrate-position/references/岗位校准判断与输出规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+    template = (PROJECT_ROOT / "05_共享模板/岗位校准建议模板.md").read_text(encoding="utf-8")
+
+    assert "[岗位校准判断与输出规范](references/岗位校准判断与输出规范.md)" in skill
+    assert "最终录用、淘汰或退出只是结果" in skill
+    assert "历史反事实" in skill
+    for heading in (
+        "## 4. 样本可比性审计",
+        "## 7. 四类重点案例",
+        "## 8. 结果泄漏和事后合理化",
+        "## 14. 反事实检查",
+        "## 22. 写入前自检",
+    ):
+        assert heading in reference
+    for field in ("样本范围与可比性", "完整决策链证据表", "误伤与放宽风险", "明确不建议修改的内容"):
+        assert field in template
+
+
 SKILL_REFERENCE_PATTERN = re.compile(r"\$[a-z][a-z0-9-]*")

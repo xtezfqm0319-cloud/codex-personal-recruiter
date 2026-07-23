@@ -103,11 +103,29 @@ def main() -> int:
     brief = generate_final_brief(root, "企业AI产品经理", "陈曦", "HR补充：到岗周期约4周；薪资期望在当前预算范围内，尚未最终确认。")
     steps.append(f"生成终面简报：{brief.relative_to(root)}")
 
-    archive = close_candidate(root, "企业AI产品经理", "陈曦", "HC暂停，未录用；面试通过，人才保留", reusable=True)
+    archive = close_candidate(
+        root,
+        "企业AI产品经理",
+        "陈曦",
+        "HC暂停，未录用；面试通过，人才保留",
+        closure_category="HC、预算或业务变化",
+        closure_reason="候选人通过业务面试，但当前岗位 HC 暂停，本次流程结束。",
+        reuse_level="优先复用",
+        validated_strengths="企业知识助手落地、分阶段验证和跨团队推进已有简历与面试证据支持。",
+        weakened_findings="业务结果归因和个人最终决策边界仍不完整。",
+        unverified_findings="终面尚未完成，最终决策边界和长期业务结果仍未验证。",
+        capability_boundary="本次未录用来自 HC 暂停，不能据此判断候选人岗位能力不足。",
+        reuse_targets="HC 恢复后的企业 AI 产品岗位，尤其适合需要从试点推进到规模化落地的场景。",
+        reuse_conditions="岗位仍重视企业客户理解、产品落地和跨团队推进。",
+        reuse_risks="重新启用前仍需核验业务结果归因和候选人的最终决策边界。",
+        future_verification="先更新当前意愿和近况，再只验证个人最终决策边界及结果口径。",
+        decision_changer="若新增证据显示关键方案和停止条件均由他人决定，复用等级应下调。",
+        lesson="外部原因结束时，要单独保存已经验证的能力，避免未来把未录用误读为能力不匹配。",
+    )
     rebuild_indexes(root)
     hits = search_history(root, "企业 AI 知识助手")
     calibration = calibrate_position(root, "企业AI产品经理")
-    steps.append(f"结束并归档：{archive.relative_to(root)}")
+    steps.append(f"结束并归档：{archive.relative_to(root)}；生成结构化归档摘要和四级复用判断")
     steps.append(f"进入历史人才索引：检索命中 {len(hits)} 人；岗位校准建议：{calibration.relative_to(root)}")
 
     issues = validate_workspace(root)

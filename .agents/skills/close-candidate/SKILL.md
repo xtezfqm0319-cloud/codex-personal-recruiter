@@ -1,14 +1,108 @@
 ---
 name: close-candidate
-description: Close and archive an active candidate, record the final result, determine reuse eligibility, leave a short position index, and rebuild global history indexes. Use for rejection, withdrawal, offer refusal, hiring, or any completed process.
+description: 结束并归档本地候选人流程，忠实记录人工最终结果，把“为什么结束”与“候选人能力如何”分开，判断未来复用等级、适用场景、风险和再次验证条件，并重建历史人才索引。适用于录用、淘汰、候选人退出、Offer 拒绝、HC 或业务暂停、时机或条件不匹配等任何已明确结束的流程。
 ---
 
-# Close Candidate
+# 结束候选人流程
 
-1. Read the full candidate record and the user's explicit final result. If the result is missing or ambiguous, ask before closing.
-2. Determine `reusable` from evidence: generally true for a candidate with validated strengths whose non-hire reason is timing, HC, compensation, location, or role fit rather than integrity or a decisive capability failure. State the reason.
-3. Run `close-candidate --result "..."` and include `--reusable` only when supported.
-4. The CLI moves the complete folder to `03_简历库/`, retains a short position index, and never deletes originals.
-5. Run `rebuild-index`, `search-history` for a sanity check, and `validate`.
-6. If the user gives a reusable reason for the outcome or corrects an earlier assessment, apply `$learn-recruiting-preferences`. Otherwise do not infer a preference from the final result alone.
-7. Report the final result, reuse value, and the most important lesson for future similar candidates in concise business language.
+## 目标
+
+归档不是把文件从岗位目录搬走，而是把一次招聘过程压缩成未来仍能正确理解的决策记录。必须同时保留：用户明确给出的最终结果、流程结束原因、已经验证的能力、未录用不等于能力不足的边界、未来是否值得复用，以及再次评估时最该验证什么。
+
+开始前完整阅读 [候选人结束归档判断与输出规范](references/候选人结束归档判断与输出规范.md)，并按其中的分类、证据、复用与自检规则执行。
+
+## 执行流程
+
+### 1. 读取完整主档案
+
+读取：
+
+- `00_公司认知/个人招聘判断偏好.md`；
+- 当前岗位 `岗位.md`；
+- 候选人总览、简历分析、候选人比较；
+- 所有面试准备、原始纪要、面试报告和人工轮次结论；
+- 终面简报、HR 补充及用户在本次对话中给出的最终结果。
+
+原始材料、AI 判断和人工结论发生冲突时，以各自原始来源为准并保留分层，不自行调和。
+
+### 2. 确认最终结果是否足够明确
+
+只有用户明确表达“流程已结束”及最终结果后才能归档。缺少结果、对象不唯一，或用户只表达暂缓但未说明是否结束时，先问一个最小必要问题。不要因为长时间无更新、面试结论偏负面或岗位暂停而自行关单。
+
+### 3. 分开四类结论
+
+在内部先独立整理：
+
+1. **人工正式结果**：忠实记录用户的最终决定；
+2. **流程结束原因**：为什么这次流程结束；
+3. **候选人能力判断**：哪些能力得到什么证据支持，哪些被削弱或仍未验证；
+4. **未来复用判断**：在什么岗位、条件和时间下值得再次考虑。
+
+禁止从“未录用”直接推导“能力不行”，也禁止从“录用”直接推导“所有风险均已验证”。
+
+### 4. 确定复用等级
+
+复用等级只能是：
+
+- `优先复用`；
+- `有条件复用`；
+- `暂不主动复用`；
+- `不建议复用`。
+
+给出等级时必须同时写明：已经验证的复用价值、适合的未来岗位或场景、不适用边界、仍需核验的风险，以及什么新情况会改变当前复用判断。不得只写“可复用：是/否”。
+
+### 5. 生成归档摘要并执行
+
+确认以上字段后运行：
+
+```bash
+python -m recruiter --root . close-candidate \
+  --position "岗位名" \
+  --candidate "候选人" \
+  --result "用户明确给出的最终结果" \
+  --closure-category "结束原因类别" \
+  --closure-reason "本次流程为何结束" \
+  --reuse-level "优先复用/有条件复用/暂不主动复用/不建议复用" \
+  --validated-strengths "已验证优势及证据" \
+  --weakened-findings "被削弱或反证的判断" \
+  --unverified-findings "流程结束时仍未验证的事项" \
+  --capability-boundary "不能由本次结果推出的能力结论" \
+  --reuse-targets "适合再次考虑的岗位或场景" \
+  --reuse-conditions "需要满足的复用条件" \
+  --reuse-risks "复用时仍需关注的风险" \
+  --future-verification "再次评估时最该验证的事项" \
+  --decision-changer "会提高或降低复用等级的新情况" \
+  --lesson "对未来相似候选人的个案启示"
+```
+
+兼容旧命令的 `--reusable` 只用于缺少结构化字段的旧数据，不应代替本次复用分析。
+
+CLI 会生成 `归档摘要.md`、更新候选人主档案、移动完整目录到 `03_简历库/`，并在原岗位保留简短索引；不得删除、覆盖或拆散原始材料。
+
+### 6. 重建并核验
+
+依次运行：
+
+```bash
+python -m recruiter --root . rebuild-index
+python -m recruiter --root . search-history --query "候选人姓名 关键能力"
+python -m recruiter --root . validate
+```
+
+检查归档路径、来源路径、SHA-256、终面简报路径、岗位结束索引和历史人才索引均可回溯。
+
+### 7. 处理偏好信号
+
+只有用户明确把本次原因概括为未来可复用的招聘规则时，才调用 `$learn-recruiting-preferences`。单次录用、淘汰、退出或一次复用判断只能形成个案记录，不能自动上升为个人长期偏好。
+
+## 对话输出
+
+先用业务语言给出：
+
+1. 最终结果和结束原因；
+2. 复用等级及最重要依据；
+3. 最适合再次考虑的场景；
+4. 再次评估前必须补的证据；
+5. 已归档路径与需要用户决定的事项（如有）。
+
+不展开移动、索引等内部过程，除非失败或用户询问。

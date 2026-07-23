@@ -207,14 +207,62 @@ def test_full_interview_brief_archive_and_history(workspace: Path) -> None:
     assert "灰度策略问题已充分回答" not in brief_text
     assert "第1轮：AI 倾向 建议推进" in brief_text
     assert "HR 补充：薪资期望在预算内。" in brief_text
-    archive = close_candidate(workspace, "AI产品经理", "林晓", "HC暂停，人才保留", reusable=True)
+    archive = close_candidate(
+        workspace,
+        "AI产品经理",
+        "林晓",
+        "HC暂停，人才保留",
+        closure_category="HC、预算或业务变化",
+        closure_reason="候选人面试证据支持继续，但当前岗位 HC 暂停。",
+        reuse_level="优先复用",
+        validated_strengths="分阶段验证和企业产品落地已有简历与一面证据支持。",
+        weakened_findings="业务结果归因仍不完整。",
+        unverified_findings="个人最终决策边界尚未完成验证。",
+        capability_boundary="本次未录用来自 HC，不代表岗位能力不符合。",
+        reuse_targets="恢复 HC 后的企业 AI 产品岗位。",
+        reuse_conditions="岗位仍需要企业产品落地和分阶段验证能力。",
+        reuse_risks="业务结果归因仍需复核。",
+        future_verification="更新当前意愿，并只验证个人最终决策边界。",
+        decision_changer="若近期经历显示仅承担协调执行，复用等级应下调。",
+        lesson="外部原因结束时，应把已验证能力和未录用结果分开保存。",
+    )
     rebuild_indexes(workspace)
     assert archive.exists()
+    overview, _ = read_markdown(archive / "00_候选人总览.md")
+    assert overview["reuse_level"] == "优先复用"
+    assert overview["closure_category"] == "HC、预算或业务变化"
+    assert overview["archive_summary"] == "03_简历库/AI产品经理/林晓/归档摘要.md"
+    archive_summary = (archive / "归档摘要.md").read_text(encoding="utf-8")
+    assert "## 二、能力判断与结果边界" in archive_summary
+    assert "本次未录用来自 HC，不代表岗位能力不符合" in archive_summary
+    assert "恢复 HC 后的企业 AI 产品岗位" in archive_summary
     hits = search_history(workspace, "知识助手")
     assert hits and hits[0]["name"] == "林晓"
+    assert hits[0]["reuse_level"] == "优先复用"
+    assert hits[0]["closure_category"] == "HC、预算或业务变化"
+    assert hits[0]["archive_summary"].endswith("归档摘要.md")
     calibration = calibrate_position(workspace, "AI产品经理")
     assert calibration.exists()
+    calibration_text = calibration.read_text(encoding="utf-8")
+    assert "## 二、样本范围与可比性" in calibration_text
+    assert "## 四、重复一致、分歧与后续反转" in calibration_text
+    assert "## 六、优先校准建议" in calibration_text
+    assert "未经用户确认，不得修改正式 `岗位.md`" in calibration_text
     assert not [i for i in validate_workspace(workspace) if i.level == "ERROR"]
+
+
+def test_close_candidate_rejects_conflicting_reuse_flags(workspace: Path) -> None:
+    add_position_and_resume(workspace)
+    ingest_resumes(workspace)
+    with pytest.raises(ValueError, match="conflicts"):
+        close_candidate(
+            workspace,
+            "AI产品经理",
+            "林晓",
+            "流程结束",
+            reusable=True,
+            reuse_level="不建议复用",
+        )
 
 
 def test_interview_analysis_rejects_unknown_inclination(workspace: Path) -> None:

@@ -1,13 +1,117 @@
 ---
 name: calibrate-position
-description: Compare a formal position profile with AI screening advice, human decisions, interview outcomes, and final results to propose calibration. Use for profile quality reviews, repeated business rejection analysis, or screening misjudgment analysis.
+description: 对比正式岗位画像、AI 简历建议、人工筛选结论、面试证据和最终结果，识别岗位定义、筛选证据规则、面试验证、流程条件、个人偏好或个体差异中的真实偏差，并生成含修改前后、支持案例、反例、风险和观察方案的岗位校准建议。适用于复盘重复淘汰、AI 与人工持续分歧、面试转化异常、岗位画像质量检查或招聘结果回顾；未经确认不修改正式岗位画像。
 ---
 
-# Calibrate Position
+# 校准岗位
 
-1. Run `calibrate-position --position "岗位名"` to build the evidence table from Markdown masters.
-2. Read confirmed personal preferences, the formal profile, and the original evidence behind repeated agreements and disagreements. Separate profile requirements, personal decision preferences, systemic patterns, and individual cases; do not infer causality from small samples.
-3. Attribute likely issues to profile, resume screening, interview standard, process, or individual variance.
-4. Write suggested changes with before/after wording, supporting cases, counterexamples, risk, and confidence described qualitatively.
-5. Do not modify `岗位.md`. Any formal profile change must be added to `待确认事项.md`, then executed only after explicit confirmation and logged in the profile change record.
-6. If a recurring difference appears to reflect the user's judgment rather than the position itself, apply `$learn-recruiting-preferences` and propose a preference candidate instead of changing the profile.
+## 目标
+
+岗位校准不是根据最近一次录用或淘汰倒推标准，而是检查现有岗位画像是否帮助我们更早、更稳定地识别真正需要的人。必须区分画像问题、简历判断问题、面试验证问题、流程或外部条件、用户个人偏好与候选人个体差异。
+
+开始前完整阅读 [岗位校准判断与输出规范](references/岗位校准判断与输出规范.md)，并按其中的样本边界、误判分类、反事实检查和变更权限执行。
+
+## 执行流程
+
+### 1. 建立证据底表
+
+运行：
+
+```bash
+python -m recruiter --root . calibrate-position --position "岗位名"
+```
+
+该命令只从 Markdown 主档案生成证据底表和分析骨架，不修改正式 `岗位.md`。
+
+### 2. 读取完整决策链
+
+读取：
+
+- `00_公司认知/个人招聘判断偏好.md`；
+- 当前正式 `岗位.md` 及画像变更记录；
+- 在岗与归档候选人的总览、简历分析、人工筛选结论；
+- 候选人比较、面试报告、人工轮次结论、终面简报；
+- 归档摘要、最终结果和结束原因。
+
+样本只覆盖部分阶段时，只校准该阶段可观察的问题，不把缺失的后续结果当作负面结果。
+
+### 3. 先审计数据可比性
+
+明确本次样本量、覆盖阶段、岗位画像版本、时间范围和主要缺失。不同画像版本、不同招聘目标或不同流程深度的候选人不能无条件合并。样本很少时可以指出风险信号和待观察假设，但不得写成已证实规律。
+
+### 4. 分层定位问题
+
+每个重复现象优先归入一层：
+
+1. 岗位画像定义；
+2. 简历筛选证据规则；
+3. 面试问题或证据标准；
+4. 招聘流程、市场、HC、预算、时机等外部条件；
+5. 已确认或待确认的个人判断偏好；
+6. 单一候选人的个体差异。
+
+不要为了让画像看起来完整，把所有问题都归因于画像。
+
+### 5. 识别真正的筛选偏差
+
+检查至少四类案例：
+
+- AI 建议较高但人工或面试未支持；
+- AI 建议较低但人工或面试发现了真实价值；
+- AI 与人工一致但后续证据推翻了共同判断；
+- 画像要求未能区分最终表现不同的候选人。
+
+最终录用、淘汰或退出只是结果，不自动等于初始判断正确或错误。外部原因结束的案例不得用于证明能力标准错误。
+
+### 6. 形成校准建议
+
+每条建议必须包含：
+
+- 建议类型：保持、澄清表述、调整证据标准、调整优先级、增加例外、调整面试验证或继续观察；
+- 当前原文或当前规则；
+- 建议后的完整文字；
+- 支持案例和具体证据；
+- 反例或不适用边界；
+- 历史反事实：如果历史上已经应用这条规则，哪些案例可能改变；
+- 误伤和放宽风险；
+- 需要继续观察的信号与可能撤回条件；
+- 定性信心：高、中、低，并说明原因。
+
+不得使用虚假的精确评分，也不得只写“适当放宽”“提高要求”等无法执行的措辞。
+
+### 7. 区分画像与个人偏好
+
+如果重复分歧反映的是用户跨岗位稳定判断，而不是这个岗位独有要求，调用 `$learn-recruiting-preferences` 生成待确认偏好候选，不要直接塞进岗位画像。一次分歧不能自动形成长期偏好。
+
+### 8. 遵守变更权限
+
+把完整分析写入 `02_岗位/<岗位>/岗位校准/当前校准建议.md`。未经用户明确确认：
+
+- 不修改正式 `岗位.md`；
+- 不增加 `image_version`；
+- 不改写任何人工候选人结论；
+- 不把建议表述成已经生效。
+
+用户确认某条画像修改后，先把精确的修改前/修改后文字写入 `04_全局索引/待确认事项.md`，再按确认范围修改正式画像并记录到岗位变更记录和 `07_运行记录/系统变更记录.md`。
+
+### 9. 完成自检
+
+运行：
+
+```bash
+python -m recruiter --root . validate
+```
+
+并确认每条建议均可追溯、存在反例检查、没有把相关性写成因果、没有用一个结果覆盖整条决策链。
+
+## 对话输出
+
+先说最重要的业务结论：
+
+1. 目前最可能需要调整的是什么；
+2. 哪些观察还只是信号、不能立即改；
+3. 建议保持不变的关键规则；
+4. 一至三条优先建议及其收益和误伤风险；
+5. 哪些修改需要用户确认。
+
+不要先汇报样本表生成、文件扫描等内部过程。

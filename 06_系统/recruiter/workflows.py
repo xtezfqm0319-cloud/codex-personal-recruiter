@@ -23,6 +23,19 @@ from .frontmatter import read_markdown, update_frontmatter, write_markdown
 RECOMMENDATIONS = ("强推", "推", "建议待定", "建议淘汰")
 HARD_CONSTRAINT_STATUSES = ("符合", "存在经确认例外", "不符合", "未验证", "不适用")
 INTERVIEW_INCLINATIONS = ("建议推进", "继续验证", "建议暂缓", "不建议推进")
+REUSE_LEVELS = ("优先复用", "有条件复用", "暂不主动复用", "不建议复用")
+CLOSURE_CATEGORIES = (
+    "已录用",
+    "能力或证据未达要求",
+    "岗位匹配不佳",
+    "候选人退出",
+    "Offer 未接受",
+    "HC、预算或业务变化",
+    "时机、地点或条件不匹配",
+    "诚信或材料可信度风险",
+    "流程或信息不足",
+    "其他已明确原因",
+)
 
 
 def _replace_section(body: str, heading: str, content: str) -> str:
@@ -1059,7 +1072,27 @@ def generate_final_brief(root: Path, position: str, candidate: str, hr_notes: st
     return brief
 
 
-def close_candidate(root: Path, position: str, candidate: str, result: str, reusable: bool = False) -> Path:
+def close_candidate(
+    root: Path,
+    position: str,
+    candidate: str,
+    result: str,
+    reusable: bool = False,
+    closure_category: str = "",
+    closure_reason: str = "",
+    reuse_level: str = "",
+    validated_strengths: str = "",
+    weakened_findings: str = "",
+    unverified_findings: str = "",
+    capability_boundary: str = "",
+    reuse_targets: str = "",
+    reuse_conditions: str = "",
+    reuse_risks: str = "",
+    future_verification: str = "",
+    decision_changer: str = "",
+    lesson: str = "",
+    preference_impact: str = "",
+) -> Path:
     active = root / "02_岗位" / position / "候选人" / candidate
     overview = active / "00_候选人总览.md"
     if not overview.exists():
@@ -1069,6 +1102,17 @@ def close_candidate(root: Path, position: str, candidate: str, result: str, reus
         pending = add_pending(root, "归档路径冲突", f"{candidate}｜{position}", f"目标已存在：{archive.relative_to(root)}", "人工确认合并策略，禁止覆盖原档案")
         raise FileExistsError(f"Archive exists; queued {pending}")
     data, _ = read_markdown(overview)
+    if not result.strip():
+        raise ValueError("Final result must be explicit before archiving")
+    closure_category = closure_category.strip() or "其他已明确原因"
+    if closure_category not in CLOSURE_CATEGORIES:
+        raise ValueError(f"Closure category must be one of: {', '.join(CLOSURE_CATEGORIES)}")
+    reuse_level = reuse_level.strip() or ("有条件复用" if reusable else "暂不主动复用")
+    if reuse_level not in REUSE_LEVELS:
+        raise ValueError(f"Reuse level must be one of: {', '.join(REUSE_LEVELS)}")
+    if reusable and reuse_level not in {"优先复用", "有条件复用"}:
+        raise ValueError("--reusable conflicts with the selected reuse level")
+    reusable = reuse_level in {"优先复用", "有条件复用"}
     old_prefix = str(active.relative_to(root))
     new_prefix = str(archive.relative_to(root))
     sources = []
@@ -1082,13 +1126,100 @@ def close_candidate(root: Path, position: str, candidate: str, result: str, reus
         "process_status": "已结束",
         "final_result": result,
         "reusable": bool(reusable),
+        "closure_category": closure_category,
+        "closure_reason": closure_reason.strip() or result.strip(),
+        "reuse_level": reuse_level,
+        "validated_strengths": validated_strengths.strip() or str(data.get("resume_evidence", "未单独记录。")),
+        "weakened_findings": weakened_findings.strip(),
+        "archive_unverified": unverified_findings.strip() or str(data.get("resume_unverified", "未单独记录。")),
+        "capability_boundary": capability_boundary.strip()
+        or "本次结果只适用于当时岗位、条件和已经获得的证据，不能据此泛化为对候选人全部能力的判断。",
+        "reuse_targets": reuse_targets.strip(),
+        "reuse_conditions": reuse_conditions.strip(),
+        "reuse_risks": reuse_risks.strip() or str(data.get("resume_risk", "未单独记录。")),
+        "future_verification": future_verification.strip(),
+        "reuse_decision_changer": decision_changer.strip(),
+        "archive_lesson": lesson.strip(),
+        "archive_preference_impact": preference_impact.strip(),
         "updated_at": today(),
         "source_files": sources,
     }
     if data.get("final_brief"):
         changes["final_brief"] = str(data["final_brief"]).replace(old_prefix, new_prefix, 1)
+    summary_relative = Path(new_prefix) / "归档摘要.md"
+    changes["archive_summary"] = str(summary_relative)
     update_frontmatter(overview, **changes)
     refresh_candidate_overview(overview)
+
+    interview_decisions = data.get("interview_human_decisions") or {}
+    interview_reasons = data.get("interview_human_decision_reasons") or {}
+    human_rounds = "\n".join(
+        f"- 第{round_no}轮：{decision}"
+        f"{f'｜理由：{interview_reasons.get(str(round_no))}' if interview_reasons.get(str(round_no)) else ''}"
+        for round_no, decision in sorted(interview_decisions.items(), key=lambda item: int(item[0]))
+    ) or "- 未记录人工面试结论。"
+    trace_paths = []
+    for path in sorted(active.rglob("*")):
+        if path.is_file() and path.name != "归档摘要.md":
+            trace_paths.append(f"- `{str(path.relative_to(root)).replace(old_prefix, new_prefix, 1)}`")
+    summary_body = f"""# {candidate}｜{position}｜归档摘要
+
+## 一、人工正式结果
+
+- 最终结果：{result.strip()}
+- 结束日期：{today()}
+- 结束原因类别：{closure_category}
+- 本次流程为何结束：{changes['closure_reason']}
+
+## 二、能力判断与结果边界
+
+### 已验证优势
+
+{changes['validated_strengths']}
+
+### 被削弱或反证的判断
+
+{changes['weakened_findings'] or '未单独记录；需回到面试报告和终面简报核验具体判断。'}
+
+### 仍未验证
+
+{changes['archive_unverified']}
+
+### 本次结果不能推出什么
+
+{changes['capability_boundary']}
+
+## 三、未来复用判断
+
+- 复用等级：{reuse_level}
+- 最适合再次考虑的岗位或场景：{changes['reuse_targets'] or '当前未形成明确复用场景。'}
+- 复用前提：{changes['reuse_conditions'] or '未单独记录。'}
+- 仍需关注的风险：{changes['reuse_risks']}
+- 可能改变复用等级的新情况：{changes['reuse_decision_changer'] or '未单独记录。'}
+
+## 四、再次评估的最小验证动作
+
+{changes['future_verification'] or '重新评估前先更新当前意愿、最近经历和与目标岗位相关的关键未验证项。'}
+
+## 五、对未来相似候选人的个案启示
+
+{changes['archive_lesson'] or '本次未形成可独立复用的个案启示。'}
+
+## 六、原人工结论与 AI 判断
+
+- 人工筛选结论：{data.get('human_decision', '未记录')}
+- 人工筛选理由：{data.get('human_decision_reason', '未记录') or '未记录'}
+{human_rounds}
+- AI 简历建议：{data.get('ai_recommendation', '未记录')}
+- 已确认个人偏好的影响：{changes['archive_preference_impact'] or '未使用或未单独记录。'}
+
+## 七、输入材料与追溯
+
+{chr(10).join(trace_paths) or '- 未发现可列出的候选人材料（需修复）。'}
+
+本摘要保留人工正式结果、AI 判断和证据边界，不替代原始材料。
+"""
+    (active / "归档摘要.md").write_text(summary_body.rstrip() + "\n", encoding="utf-8")
     archive.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(active), str(archive))
     for generated in archive.rglob("*.md"):
@@ -1097,8 +1228,18 @@ def close_candidate(root: Path, position: str, candidate: str, result: str, reus
             generated.write_text(text.replace(old_prefix, new_prefix), encoding="utf-8")
     ended = root / "02_岗位" / position / "已结束候选人索引.md"
     with ended.open("a", encoding="utf-8") as handle:
-        handle.write(f"\n- {today()}｜{candidate}｜{result}｜可复用：{'是' if reusable else '否'}｜`{archive.relative_to(root)}`\n")
-    log_action(root, "candidate.archived", candidate=candidate, position=position, result=result, reusable=reusable, path=str(archive.relative_to(root)))
+        handle.write(f"\n- {today()}｜{candidate}｜{result}｜复用等级：{reuse_level}｜`{archive.relative_to(root)}`\n")
+    log_action(
+        root,
+        "candidate.archived",
+        candidate=candidate,
+        position=position,
+        result=result,
+        closure_category=closure_category,
+        reusable=reusable,
+        reuse_level=reuse_level,
+        path=str(archive.relative_to(root)),
+    )
     return archive
 
 
@@ -1107,40 +1248,69 @@ def search_history(root: Path, query: str, position: str = "") -> list[dict[str,
     results: list[dict[str, str]] = []
     for overview in (root / "03_简历库").glob("*/*/00_候选人总览.md"):
         data, body = read_markdown(overview)
-        haystack = f"{overview}\n{data}\n{body}".lower()
+        archive_summary = overview.parent / "归档摘要.md"
+        archive_text = archive_summary.read_text(encoding="utf-8") if archive_summary.exists() else ""
+        haystack = f"{overview}\n{data}\n{body}\n{archive_text}".lower()
         matches = sum(token in haystack for token in tokens)
         reusable = bool(data.get("reusable"))
         if tokens and matches == 0:
             continue
-        if position and position.lower() not in haystack and not reusable:
-            continue
+        original_position = str(data.get("position", overview.parents[1].name))
         results.append(
             {
                 "name": str(data.get("name", overview.parent.name)),
-                "original_position": str(data.get("position", overview.parents[1].name)),
+                "original_position": original_position,
                 "final_result": str(data.get("final_result", "未记录")),
+                "closure_category": str(data.get("closure_category", "未记录")),
+                "closure_reason": str(data.get("closure_reason", data.get("final_result", "未记录"))),
                 "reusable": "是" if reusable else "否",
+                "reuse_level": str(data.get("reuse_level", "有条件复用" if reusable else "暂不主动复用")),
+                "reuse_targets": str(data.get("reuse_targets", "未记录")),
+                "reuse_risks": str(data.get("reuse_risks", data.get("resume_risk", "未记录"))),
+                "future_verification": str(data.get("future_verification", "未记录")),
+                "position_match": "是" if position and position.lower() == original_position.lower() else "否",
+                "archive_summary": str(archive_summary.relative_to(root)) if archive_summary.exists() else "",
                 "path": str(overview.relative_to(root)),
                 "matches": str(matches),
             }
         )
-    results.sort(key=lambda item: (item["reusable"] != "是", -int(item["matches"]), item["name"]))
+    reuse_order = {"优先复用": 0, "有条件复用": 1, "暂不主动复用": 2, "不建议复用": 3}
+    results.sort(
+        key=lambda item: (
+            reuse_order.get(item["reuse_level"], 4),
+            item["position_match"] != "是",
+            -int(item["matches"]),
+            item["name"],
+        )
+    )
     log_action(root, "history.searched", query=query, position=position, count=len(results))
     return results
 
 
 def calibrate_position(root: Path, position: str) -> Path:
-    records = []
+    records: list[dict[str, object]] = []
     paths = list((root / "02_岗位" / position / "候选人").glob("*/00_候选人总览.md"))
     paths += list((root / "03_简历库" / position).glob("*/00_候选人总览.md"))
     for path in paths:
         data, _ = read_markdown(path)
+        data = dict(data)
+        data["_path"] = str(path.relative_to(root))
         records.append(data)
     differences = [r for r in records if r.get("human_decision") not in {None, "待确认"} and r.get("ai_recommendation") not in {None, "待分析"}]
+    def clean(value: object) -> str:
+        return str(value or "未记录").replace("|", "｜").replace("\n", " ")
+
     rows = "\n".join(
-        f"| {r.get('name')} | {r.get('ai_recommendation')} | {r.get('human_decision')} | {r.get('final_result', '进行中')} | {r.get('resume_risk', '未记录')} |"
+        f"| {clean(r.get('name'))} | {clean(r.get('ai_recommendation'))} | "
+        f"{clean(r.get('human_decision'))}：{clean(r.get('human_decision_reason'))} | "
+        f"{clean((sorted(r.get('interview_summaries') or [], key=lambda item: item.get('round', 0)) or [{}])[-1].get('inclination'))} | "
+        f"{clean(r.get('final_result', '进行中'))}：{clean(r.get('closure_reason'))} | `{clean(r.get('_path'))}` |"
         for r in differences
-    ) or "| 暂无 | 暂无 | 暂无 | 暂无 | 样本不足 |"
+    ) or "| 暂无 | 暂无 | 暂无 | 暂无 | 暂无 | 样本不足 |"
+    interviewed = sum(bool(r.get("interview_summaries")) for r in records)
+    closed = sum(r.get("process_status") == "已结束" for r in records)
+    profile = root / "02_岗位" / position / "岗位.md"
+    profile_data, _ = read_markdown(profile)
     target = root / "02_岗位" / position / "岗位校准" / "当前校准建议.md"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
@@ -1148,24 +1318,87 @@ def calibrate_position(root: Path, position: str) -> Path:
 
 生成日期：{today()}
 
-## 样本对比
+## 一、结论摘要
 
-| 候选人 | AI筛选建议 | 人工结论 | 最终结果 | 初始风险 |
-|---|---|---|---|---|
+- 最值得调整：待 AI 助手基于完整决策链判断，不能仅由最终结果倒推。
+- 建议保持：待识别有区分力且没有稳定反证的正式规则。
+- 当前只能继续观察：待说明样本不足、阶段缺失或外部原因混杂的信号。
+
+## 二、样本范围与可比性
+
+- 候选人记录：{len(records)} 个。
+- AI 与人工筛选结论均可比较：{len(differences)} 个。
+- 有面试分析：{interviewed} 个。
+- 已结束流程：{closed} 个。
+- 当前岗位画像版本：{profile_data.get('image_version', '未记录')}。
+- 可比性边界：待 AI 助手检查不同画像版本、时间范围、流程深度和结果缺失。
+
+## 三、完整决策链证据表
+
+| 候选人 | AI 筛选建议 | 人工筛选结论与理由 | 最近 AI 面试倾向 | 最终结果与结束原因 | 主档案 |
+| --- | --- | --- | --- | --- | --- |
 {rows}
 
-## 观察
+## 四、重复一致、分歧与后续反转
 
-- 当前共有 {len(records)} 个候选人记录，{len(differences)} 个包含可对比的 AI 与人工结论。
-- 应由 AI 助手结合原始证据判断分歧更可能来自画像、筛选标准、面试标准或个别案例，不从样本数量直接推导因果。
+- 待分别检查可能的假阳性、假阴性、AI 与人工共同误判，以及没有区分力的规则。
+- 最终录用、淘汰或退出不能自动证明早期筛选正确或错误。
 
-## 建议修改
+## 五、问题归因
 
-- 待 AI 助手基于重复出现的通过、淘汰与分歧原因提出，并展示修改前后差异。
+### 岗位画像
 
-## 权限提示
+待分析。
 
-本文件仅是建议。未经用户确认，不得修改正式 `岗位.md` 或增加 `image_version`。
+### 简历筛选证据规则
+
+待分析。
+
+### 面试验证
+
+待分析。
+
+### 流程或外部条件
+
+待分析；先排除 HC、预算、市场、时机、候选人退出和 Offer 条件。
+
+### 个人偏好
+
+待分析；未经确认的偏好不得写入正式规则。
+
+### 个体差异
+
+待分析；单一案例不得直接泛化。
+
+## 六、优先校准建议
+
+### 建议一
+
+- 建议类型：待选择“保持 / 澄清表述 / 调整证据标准 / 调整优先级 / 增加例外 / 调整面试验证 / 继续观察”。
+- 当前原文或规则：待从 `02_岗位/{position}/岗位.md` 准确引用。
+- 建议后的完整文字：待补充；必须可直接执行。
+- 支持案例与路径：待补充。
+- 反例或不适用边界：待补充。
+- 历史反事实：待说明哪些历史决定可能改变。
+- 预期收益：待补充。
+- 误伤与放宽风险：待补充。
+- 继续观察与撤回条件：待补充。
+- 信心：待用高、中、低定性说明。
+
+## 七、明确不建议修改的内容
+
+- 待说明哪些规则应保持，以及为什么不应因近期结果改动。
+
+## 八、待确认事项
+
+- 当前没有已确认修改。任何正式画像变更必须先提供精确的修改前和修改后文字并获得用户明确确认。
+
+## 九、输入材料与追溯
+
+- 正式岗位画像：`{profile.relative_to(root)}`
+{chr(10).join(f"- `{clean(r.get('_path'))}`" for r in records) or '- 当前没有候选人主档案。'}
+
+本文件仅是校准建议。未经用户确认，不得修改正式 `岗位.md`、增加 `image_version` 或改写人工候选人结论。
 """,
         encoding="utf-8",
     )

@@ -1,4 +1,4 @@
 interface:
-  display_name: "结束候选人"
-  short_description: "Close and archive a candidate with reusable history"
-  default_prompt: "Use $close-candidate to close and archive this candidate."
+  display_name: "结束并归档候选人"
+  short_description: "保真记录最终结果并沉淀可复用人才判断"
+  default_prompt: "使用 $close-candidate 结束并归档这名候选人，区分结束原因、能力判断和未来复用条件。"

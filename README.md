@@ -9,16 +9,16 @@
 > [!IMPORTANT]
 > **使用订阅登录时，不用接模型 API，也没有单独的 API 账单。** Codex 可使用包含它的 ChatGPT 套餐；Claude Code 可使用 Claude Pro、Max、Team 或 Enterprise 等支持的订阅。项目本身不调用外部模型 API，也不需要服务器、数据库或另一套招聘系统。使用 API Key 登录则可能按供应商规则计费，具体以 [Codex 官方说明](https://learn.chatgpt.com/docs/pricing) 和 [Claude Code 官方说明](https://code.claude.com/docs/en/authentication) 为准。
 
-## 最新更新：终面前，只看真正影响录用的信息
+## 最新更新：一次招聘结束后，留下下次真正能用的判断
 
-当前版本为 `v0.10.0`。这次继续优化招聘判断，不增加网页、服务或外部模型 API：
+当前版本为 `v0.11.0`。这一版完成主流程最后三个环节的提示词升级，不增加网页、服务或外部模型 API：
 
-- 终面简报不再按简历和面试轮次重复摘要，而是按岗位的决定性标准组织证据；
-- 岗位胜任、证据可信度和到岗/预算等录用可行性会分开判断，不再混成“整体还可以”；
-- 同一项目在简历和多轮面试里重复出现仍只算一条证据链；
-- “谨慎推进”和“继续验证”现在有明确边界：前者是是否接受已知风险，后者是关键证据还不足；
-- 终面只保留会改变录用倾向的问题，并给出时间不足时的必问三题；
-- 简报会告诉你哪些已经问清、不值得再问，最大下行风险是什么，以及哪条新证据会改变当前倾向。
+- 候选人归档不再只写“录用/淘汰”和“可复用是/否”，而是把人工最终结果、流程结束原因、能力证据和未来复用条件分开保存；
+- 历史人才复用分为“优先复用、有条件复用、暂不主动复用、不建议复用”，并明确适合的岗位、风险和再次评估的最小动作；
+- 历史搜索不把关键词命中当成匹配，会按当前岗位重新读取旧简历、面试证据、人工结论和归档原因；
+- 多名历史候选人会按当前投入价值排序，并解释原岗位与当前需求的差异，不直接继承旧岗位上的强推或淘汰；
+- 岗位校准会区分画像、简历证据规则、面试验证、流程外部条件、个人偏好和个体差异；
+- 最终结果不会被反向当作早期判断正确的证明，每条校准建议都要有修改前后、支持案例、反例、历史反事实和误伤风险。
 
 完整版本记录见 [`CHANGELOG.md`](CHANGELOG.md)。
 
@@ -177,7 +177,7 @@ python -m recruiter --root . confirm-screening --position "C端产品经理" --c
 python -m recruiter --root . ingest-interviews
 python -m recruiter --root . record-interview-analysis --position "C端产品经理" --candidate "张三" --round 1 --interviewer-evaluation "..." --ai-analysis "..." --evidence "..." --unverified "..."
 python -m recruiter --root . generate-final-brief --position "C端产品经理" --candidate "张三"
-python -m recruiter --root . close-candidate --position "C端产品经理" --candidate "张三" --result "流程结束-人才保留" --reusable
+python -m recruiter --root . close-candidate --position "C端产品经理" --candidate "张三" --result "HC暂停，本次未录用" --closure-category "HC、预算或业务变化" --reuse-level "优先复用" --closure-reason "面试通过，但当前HC暂停" --validated-strengths "..." --capability-boundary "本次未录用不代表能力不符合" --reuse-targets "..." --future-verification "..."
 python -m recruiter --root . rebuild-index
 python -m recruiter --root . search-history --query "产品 B端"
 python -m recruiter --root . calibrate-position --position "C端产品经理"
