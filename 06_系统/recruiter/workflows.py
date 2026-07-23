@@ -24,6 +24,8 @@ RECOMMENDATIONS = ("强推", "推", "建议待定", "建议淘汰")
 HARD_CONSTRAINT_STATUSES = ("符合", "存在经确认例外", "不符合", "未验证", "不适用")
 INTERVIEW_INCLINATIONS = ("建议推进", "继续验证", "建议暂缓", "不建议推进")
 REUSE_LEVELS = ("优先复用", "有条件复用", "暂不主动复用", "不建议复用")
+PREFERENCE_TYPES = ("通用招聘判断", "岗位族专项", "交互偏好")
+PREFERENCE_DECISIONS = ("确认", "拒绝")
 CLOSURE_CATEGORIES = (
     "已录用",
     "能力或证据未达要求",
@@ -41,6 +43,25 @@ CLOSURE_CATEGORIES = (
 def _replace_section(body: str, heading: str, content: str) -> str:
     pattern = rf"({re.escape(heading)}\n\n).*?(?=\n## |\Z)"
     return re.sub(pattern, lambda match: match.group(1) + content.strip() + "\n", body, flags=re.DOTALL)
+
+
+def _append_section_entry(body: str, heading: str, entry: str) -> str:
+    marker = f"{heading}\n"
+    if marker not in body:
+        return body.rstrip() + f"\n\n{heading}\n\n{entry.strip()}\n"
+    start = body.index(marker) + len(marker)
+    next_heading = body.find("\n## ", start)
+    end = len(body) if next_heading < 0 else next_heading
+    current = body[start:end].rstrip()
+    combined = f"{current}\n\n{entry.strip()}" if current else f"\n{entry.strip()}"
+    return body[:start] + combined + "\n" + body[end:]
+
+
+def _required(value: str, field: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"{field} must not be empty")
+    return normalized
 
 
 def refresh_candidate_overview(path: Path) -> None:
@@ -1285,6 +1306,333 @@ def search_history(root: Path, query: str, position: str = "") -> list[dict[str,
     )
     log_action(root, "history.searched", query=query, position=position, count=len(results))
     return results
+
+
+def propose_recruiting_preference(
+    root: Path,
+    preference_type: str,
+    scope: str,
+    rule: str,
+    effect: str,
+    evidence_standard: str,
+    exceptions: str,
+    counterexample: str,
+    source: str,
+) -> str:
+    if preference_type not in PREFERENCE_TYPES:
+        raise ValueError(f"Preference type must be one of: {', '.join(PREFERENCE_TYPES)}")
+    values = {
+        "scope": _required(scope, "scope"),
+        "rule": _required(rule, "rule"),
+        "effect": _required(effect, "effect"),
+        "evidence_standard": _required(evidence_standard, "evidence_standard"),
+        "exceptions": _required(exceptions, "exceptions"),
+        "counterexample": _required(counterexample, "counterexample"),
+        "source": _required(source, "source"),
+    }
+    subject = f"{preference_type}｜{values['scope']}"
+    reason = (
+        f"拟确认规则：“{values['rule']}”｜影响：{values['effect']}｜"
+        f"证据要求：{values['evidence_standard']}｜例外：{values['exceptions']}｜"
+        f"反例：{values['counterexample']}｜来源：{values['source']}"
+    )
+    pending_id = add_pending(
+        root,
+        "确认个人招聘偏好",
+        subject,
+        reason,
+        "用户确认同一条完整规则后写入个人招聘判断偏好主档案；确认前不得用于正式判断",
+    )
+    log_action(
+        root,
+        "preference.proposed",
+        pending_id=pending_id,
+        preference_type=preference_type,
+        scope=values["scope"],
+        rule=values["rule"],
+    )
+    return pending_id
+
+
+def resolve_recruiting_preference(
+    root: Path,
+    decision: str,
+    preference_type: str,
+    scope: str,
+    rule: str,
+    effect: str,
+    evidence_standard: str,
+    exceptions: str,
+    counterexample: str,
+    source: str,
+    retain_rejection: bool = False,
+) -> Path:
+    if decision not in PREFERENCE_DECISIONS:
+        raise ValueError(f"Decision must be one of: {', '.join(PREFERENCE_DECISIONS)}")
+    if preference_type not in PREFERENCE_TYPES:
+        raise ValueError(f"Preference type must be one of: {', '.join(PREFERENCE_TYPES)}")
+    values = {
+        "scope": _required(scope, "scope"),
+        "rule": _required(rule, "rule"),
+        "effect": _required(effect, "effect"),
+        "evidence_standard": _required(evidence_standard, "evidence_standard"),
+        "exceptions": _required(exceptions, "exceptions"),
+        "counterexample": _required(counterexample, "counterexample"),
+        "source": _required(source, "source"),
+    }
+    path = root / "00_公司认知" / "个人招聘判断偏好.md"
+    if not path.exists():
+        raise FileNotFoundError(path)
+    data, body = read_markdown(path)
+    if decision == "确认" and f"- 完整规则：{values['rule']}" in body:
+        raise ValueError("The same confirmed preference already exists")
+
+    subject = f"{preference_type}｜{values['scope']}"
+    pending_id = resolve_pending(
+        root,
+        "确认个人招聘偏好",
+        subject,
+        f"用户已{decision}完整规则；{'写入正式偏好主档案' if decision == '确认' else '不得用于正式判断'}",
+        required_text=f"拟确认规则：“{values['rule']}”",
+    )
+    if pending_id is None:
+        raise PermissionError("No matching pending preference proposal exists")
+
+    preference_id = pending_id.replace("PENDING-", "PREF-", 1)
+    if decision == "确认":
+        section = {
+            "通用招聘判断": "## 已确认招聘偏好",
+            "岗位族专项": "## 岗位族专项偏好",
+            "交互偏好": "## 已确认交互偏好",
+        }[preference_type]
+        impact = "汇报顺序 / 追问方式 / 工作节奏 / 文件落盘" if preference_type == "交互偏好" else values["effect"]
+        entry = f"""### {preference_id}
+
+- 状态：已确认
+- 类型：{preference_type}
+- 适用范围：{values['scope']}
+- 完整规则：{values['rule']}
+- 影响环节：{impact}
+- 证据要求：{values['evidence_standard']}
+- 例外与不适用情形：{values['exceptions']}
+- 已知反例：{values['counterexample']}
+- 不得进一步推出：不得超出上述范围，不得改写原始事实、正式岗位画像或人工候选人结论
+- 来源案例与用户原话：{values['source']}
+- 确认日期：{today()}
+- 与岗位画像或其他偏好的关系：发生冲突时必须显式说明并重新确认，不静默覆盖"""
+        body = _append_section_entry(body, section, entry)
+        body = _append_section_entry(
+            body,
+            "## 变更记录",
+            f"- {today()}：确认 {preference_id}（{preference_type}｜{values['scope']}）。",
+        )
+        data["status"] = data.get("status", "使用中")
+        data["updated_at"] = today()
+        data["confirmed_recruiting_preferences"] = int(data.get("confirmed_recruiting_preferences") or 0) + 1
+        write_markdown(path, data, body)
+    elif retain_rejection:
+        entry = f"""### REJECTED-{pending_id.removeprefix('PENDING-')}
+
+- 原规则或提案：{values['rule']}
+- 状态：已拒绝
+- 范围：{preference_type}｜{values['scope']}
+- 原因：用户明确拒绝该完整规则；保留记录仅用于避免未来重复误推
+- 日期：{today()}
+- 后续边界：不得作为有效偏好使用"""
+        body = _append_section_entry(body, "## 已拒绝或撤销的偏好", entry)
+        body = _append_section_entry(
+            body,
+            "## 变更记录",
+            f"- {today()}：拒绝并保留提案记录 REJECTED-{pending_id.removeprefix('PENDING-')}。",
+        )
+        data["updated_at"] = today()
+        write_markdown(path, data, body)
+
+    log_action(
+        root,
+        "preference.resolved",
+        pending_id=pending_id,
+        preference_id=preference_id if decision == "确认" else "",
+        decision=decision,
+        preference_type=preference_type,
+        scope=values["scope"],
+        retained_rejection=retain_rejection,
+    )
+    return path
+
+
+def _open_pending_items(root: Path) -> list[dict[str, str]]:
+    path = root / "04_全局索引" / "待确认事项.md"
+    if not path.exists():
+        return []
+    text = path.read_text(encoding="utf-8")
+    items: list[dict[str, str]] = []
+    for match in re.finditer(r"(?m)^## (PENDING-[^｜\n]+)｜([^\n]+)\n(.*?)(?=^## |\Z)", text, re.DOTALL):
+        block = match.group(3)
+        if "- 状态：待确认" not in block:
+            continue
+
+        def field(name: str) -> str:
+            found = re.search(rf"(?m)^- {re.escape(name)}：(.*)$", block)
+            return found.group(1).strip() if found else ""
+
+        items.append(
+            {
+                "id": match.group(1),
+                "kind": match.group(2).strip(),
+                "subject": field("对象"),
+                "reason": field("原因"),
+                "action": field("待执行动作"),
+            }
+        )
+    return items
+
+
+def prepare_daily_brief(root: Path) -> Path:
+    def clean(value: object) -> str:
+        return str(value or "未记录").replace("|", "｜").replace("\n", " ")
+
+    position_records: list[dict[str, object]] = []
+    candidate_records: list[dict[str, object]] = []
+    for position_file in sorted((root / "02_岗位").glob("*/岗位.md")):
+        position_data, _ = read_markdown(position_file)
+        position_name = str(position_data.get("position_name", position_file.parent.name))
+        status = str(position_data.get("status", "未记录"))
+        candidates = []
+        for overview in sorted((position_file.parent / "候选人").glob("*/00_候选人总览.md")):
+            data, _ = read_markdown(overview)
+            record = dict(data)
+            record["path"] = str(overview.relative_to(root))
+            record["position"] = str(data.get("position", position_name))
+            record["name"] = str(data.get("name", overview.parent.name))
+            candidates.append(record)
+            candidate_records.append(record)
+        position_records.append(
+            {
+                "name": position_name,
+                "status": status,
+                "path": str(position_file.relative_to(root)),
+                "candidates": candidates,
+            }
+        )
+
+    pending_items = _open_pending_items(root)
+    user_rows = []
+    for record in candidate_records:
+        if record.get("human_decision") == "待确认" and record.get("ai_recommendation") not in {None, "", "待分析"}:
+            user_rows.append(
+                f"| {clean(record['position'])} / {clean(record['name'])} | 确认本批筛选结论 | "
+                f"推进 / 待定 / 淘汰 | AI 建议：{clean(record.get('ai_recommendation'))} | "
+                f"见候选人总览及简历分析 | 见未验证项 | 给出一个结论或批量例外 | 阻塞后续流程 |"
+            )
+    for item in pending_items:
+        user_rows.append(
+            f"| {clean(item['subject'])} | {clean(item['kind'])} | 确认 / 拒绝 / 补充信息 | "
+            f"待 AI 结合原始材料给出倾向 | {clean(item['reason'])} | 未经确认不得执行 | "
+            f"确认一个选项 | {clean(item['action'])} |"
+        )
+
+    ai_rows = []
+    resume_inbox = sorted(p for p in (root / "01_待处理" / "简历").glob("*") if p.is_file())
+    interview_inbox = sorted(p for p in (root / "01_待处理" / "面试纪要").glob("*") if p.is_file())
+    if resume_inbox:
+        ai_rows.append(f"| 处理 {len(resume_inbox)} 份待处理简历 | 生成岗位证据判断与批量确认汇总 | 待执行 | 识别不清或涉及已有人工结论时 |")
+    if interview_inbox:
+        ai_rows.append(f"| 处理 {len(interview_inbox)} 份面试纪要 | 生成分层面试报告并更新流程证据 | 待执行 | 候选人、岗位或轮次识别不清时 |")
+    unanalyzed = [r for r in candidate_records if r.get("ai_recommendation") in {None, "", "待分析"}]
+    if unanalyzed:
+        ai_rows.append(f"| 完成 {len(unanalyzed)} 名已建档候选人的简历证据分析 | 形成四档建议和岗位内比较输入 | 待执行 | 正式岗位画像不完整时 |")
+
+    position_rows = []
+    for record in position_records:
+        candidates = record["candidates"]
+        waiting = sum(
+            c.get("human_decision") == "待确认" and c.get("ai_recommendation") not in {None, "", "待分析"}
+            for c in candidates
+        )
+        unanalyzed_count = sum(c.get("ai_recommendation") in {None, "", "待分析"} for c in candidates)
+        current_problem = (
+            f"{waiting} 名候选人等待人工筛选决定"
+            if waiting
+            else (f"{unanalyzed_count} 名候选人待完成证据分析" if unanalyzed_count else "事实底稿未发现待处理候选人判断")
+        )
+        closest = "、".join(str(c["name"]) for c in candidates[:3]) or "暂无活跃候选人"
+        position_rows.append(
+            f"| {clean(record['name'])} | {clean(current_problem)} | {clean(closest)} | "
+            f"待 AI 结合完整材料判断 | 待判断 | 新材料、明确日期或用户决定 |"
+        )
+
+    candidate_sources = "\n".join(f"- `{clean(record['path'])}`" for record in candidate_records)
+    position_sources = "\n".join(f"- `{clean(record['path'])}`" for record in position_records)
+    pending_path = root / "04_全局索引" / "待确认事项.md"
+    body = f"""# 今日招聘简报
+
+- 生成日期：{today()}
+- 数据范围：本地正式主档案
+- 生成阶段：确定性事实底稿，待 AI 读取关键原始材料后完成业务优先级判断
+
+## 一句话结论
+
+事实底稿已刷新；当前不凭文件时间、数量或缺失字段制造优先级。
+
+## 一、现在最值得关注的事
+
+待 AI 根据真实决策阻塞、明确时间窗口、延后成本和下一步价值选出最多三项；没有高价值事项时可以少于三项。
+
+## 二、只等你决定
+
+| 岗位/候选人 | 需要决定什么 | 可选项 | AI 当前倾向 | 最强依据 | 最大风险 | 你的最小输入 | 不决定的影响 |
+|---|---|---|---|---|---|---|---|
+{chr(10).join(user_rows) or '| 当前没有需要你决定的事项 | — | — | — | — | — | — | — |'}
+
+## 三、AI 可以直接继续
+
+| 业务行动 | 将产生的结果 | 当前状态 | 仅在什么情况下需要你介入 |
+|---|---|---|---|
+{chr(10).join(ai_rows) or '| 当前没有从事实字段中识别出的直接处理任务 | — | — | — |'}
+
+## 四、等待外部信息
+
+| 岗位/候选人 | 等待谁提供什么 | 当前无需重复做什么 | 重新进入优先队列的触发条件 | 日期来源 |
+|---|---|---|---|---|
+| 待 AI 从面试安排、候选人总览和用户近期目标中识别 | — | — | — | 不得根据文件时间猜测 |
+
+## 五、岗位注意力概览
+
+| 岗位 | 当前最重要的问题 | 最接近决策的候选人/批次 | 主要阻塞 | 下一步所有者 | 重新评估触发条件 |
+|---|---|---|---|---|---|
+{chr(10).join(position_rows) or '| 暂无正式岗位 | — | — | — | — | 新建或恢复岗位 |'}
+
+## 六、可以放心稍后处理
+
+待 AI 说明哪些事项延后不会产生实际损失，以及重新进入优先队列的触发条件；不得把可重建索引或例行文件整理包装成业务优先事项。
+
+## 七、事实边界与信息来源
+
+- 待处理简历：{len(resume_inbox)} 份。
+- 待处理面试纪要：{len(interview_inbox)} 份。
+- 待确认事项：{len(pending_items)} 项。
+- 正式岗位：
+{position_sources or '- 暂无。'}
+- 活跃候选人总览：
+{candidate_sources or '- 暂无。'}
+- 待确认主档案：`{pending_path.relative_to(root)}`
+
+本文件是可重建业务视图，不是岗位状态、候选人结论、日期或优先级的新事实来源。开放式优先级判断必须回到上述主档案和关键证据。
+"""
+    path = root / "04_全局索引" / "今日招聘简报.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body.rstrip() + "\n", encoding="utf-8")
+    log_action(
+        root,
+        "daily_brief.facts_prepared",
+        positions=len(position_records),
+        candidates=len(candidate_records),
+        pending=len(pending_items),
+        resume_inbox=len(resume_inbox),
+        interview_inbox=len(interview_inbox),
+    )
+    return path
 
 
 def calibrate_position(root: Path, position: str) -> Path:

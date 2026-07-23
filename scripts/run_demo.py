@@ -19,8 +19,11 @@ from recruiter.workflows import (  # noqa: E402
     ingest_interviews,
     ingest_resumes,
     init_workspace,
+    prepare_daily_brief,
+    propose_recruiting_preference,
     record_interview_analysis,
     record_resume_analysis,
+    resolve_recruiting_preference,
     search_history,
     set_interview_decision,
 )
@@ -45,6 +48,20 @@ def main() -> int:
     (root / "04_全局索引" / "待确认事项.md").write_text("# 待确认事项\n", encoding="utf-8")
 
     steps: list[str] = []
+    preference = {
+        "preference_type": "岗位族专项",
+        "scope": "需要独立判断的产品岗位",
+        "rule": "团队结果不能直接证明候选人的个人贡献，必须看到本人做出的关键取舍和结果边界。",
+        "effect": "影响证据置信度、岗位内排序和面试验证",
+        "evidence_standard": "材料至少说明本人识别的问题、关键选择、推动动作和结果归因",
+        "exceptions": "岗位只要求明确执行时，不把独立决策作为能力底线",
+        "counterexample": "候选人不是最终负责人，但能证明职责范围内的关键取舍和结果",
+        "source": "模拟用户明确确认：以后产品岗位都按这条完整规则判断。",
+    }
+    pending_preference = propose_recruiting_preference(root, **preference)
+    resolve_recruiting_preference(root, "确认", **preference)
+    steps.append(f"学习并确认个人招聘偏好：{pending_preference}；未确认前不生效，确认后写入正式主档案")
+
     fixtures = PROJECT / "06_系统" / "tests" / "fixtures"
     jd = (fixtures / "企业AI产品经理-JD.txt").read_text(encoding="utf-8")
     profile = (fixtures / "企业AI产品经理-已确认画像.md").read_text(encoding="utf-8")
@@ -69,6 +86,9 @@ def main() -> int:
     )
     rebuild_indexes(root)
     steps.append("处理简历并生成四档建议：强推；候选人总表已统一排序")
+
+    daily_brief = prepare_daily_brief(root)
+    steps.append(f"生成今日招聘事实底稿：{daily_brief.relative_to(root)}；区分用户决定、AI 可继续和外部等待")
 
     confirm_screening(root, "企业AI产品经理", "陈曦", "推进")
     rebuild_indexes(root)
@@ -136,6 +156,10 @@ def main() -> int:
         + "\n".join(f"{idx}. {step}" for idx, step in enumerate(steps, 1))
         + f"\n\n## 校验\n\n- 错误：{len(errors)}\n- 警告：{len([i for i in issues if i.level == 'WARNING'])}\n"
         + ("\n".join(f"- {i.level} {i.code}: {i.path} - {i.message}" for i in issues) or "- 工作区校验通过。")
+        + "\n\n## 招聘总控入口对应场景\n\n"
+        + "- 用户说“处理新简历并告诉我先约谁”时，总入口会连续覆盖上面的简历建档、证据分析、岗位内比较和批量确认准备，只在写入人工正式结论前停下。\n"
+        + "- 用户确认推进后再说“分析一面，值得的话准备终面”，总入口会沿用同一候选人上下文，完成纪要分析并呈现判断变化；人工面试结论仍由用户决定。\n"
+        + "- 本演示脚本实际执行相同的底层确定性工作流；总入口负责在 Codex 或 Claude Code 对话中理解和编排这些步骤，不调用外部模型 API。\n"
         + "\n\n## 说明\n\n- 所有材料均为脱敏模拟数据。\n- 演示中的开放式业务判断由脚本显式传入，模拟 AI 助手按 Skills 生成后调用 `record-*` 落盘；Python 本身没有调用模型。\n",
         encoding="utf-8",
     )

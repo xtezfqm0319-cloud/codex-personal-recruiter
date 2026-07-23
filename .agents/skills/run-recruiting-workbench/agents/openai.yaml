@@ -1,0 +1,4 @@
+interface:
+  display_name: "招聘工作台总入口"
+  short_description: "理解自然语言招聘目标，连续调度专业流程并只呈现最小用户决策"
+  default_prompt: "使用 $run-recruiting-workbench 理解我现在想解决的招聘问题，直接完成无需我介入的步骤，只把真正需要我决定的事项交给我。"

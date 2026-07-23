@@ -29,7 +29,7 @@ def test_claude_skills_match_canonical_skills() -> None:
     codex_names = {path.name for path in (PROJECT_ROOT / ".agents/skills").iterdir() if (path / "SKILL.md").exists()}
     claude_names = {path.name for path in (PROJECT_ROOT / ".claude/skills").iterdir() if (path / "SKILL.md").exists()}
     assert claude_names == codex_names
-    assert len(claude_names) == 12
+    assert len(claude_names) == 13
 
 
 def test_claude_cross_skill_calls_use_slash_commands() -> None:
@@ -236,6 +236,113 @@ def test_calibrate_position_has_detailed_chinese_contract() -> None:
         assert heading in reference
     for field in ("样本范围与可比性", "完整决策链证据表", "误伤与放宽风险", "明确不建议修改的内容"):
         assert field in template
+
+
+def test_learn_preferences_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/learn-recruiting-preferences/SKILL.md").read_text(encoding="utf-8")
+    reference_path = (
+        PROJECT_ROOT / ".agents/skills/learn-recruiting-preferences/references/个人招聘偏好识别与应用规范.md"
+    )
+    reference = reference_path.read_text(encoding="utf-8")
+    template = (PROJECT_ROOT / "05_共享模板/个人招聘判断偏好模板.md").read_text(encoding="utf-8")
+
+    assert "[个人招聘偏好识别与应用规范](references/个人招聘偏好识别与应用规范.md)" in skill
+    assert "个案决定" in skill and "不可学习内容" in skill
+    assert "propose-preference" in skill and "resolve-preference" in skill
+    for heading in (
+        "## 3. 六层反馈分类",
+        "## 6. 规则候选的完整结构",
+        "## 9. 反例与过度泛化检查",
+        "## 13. 确认、拒绝、修改与撤销",
+        "## 16. 已确认偏好的应用审计",
+        "## 20. 写入前自检",
+    ):
+        assert heading in reference
+    for field in ("完整规则", "决策影响", "证据要求", "已知反例", "不得进一步推出"):
+        assert field in template
+
+
+def test_daily_brief_has_detailed_chinese_contract() -> None:
+    skill = (PROJECT_ROOT / ".agents/skills/daily-recruiting-brief/SKILL.md").read_text(encoding="utf-8")
+    reference_path = PROJECT_ROOT / ".agents/skills/daily-recruiting-brief/references/今日招聘优先级与行动简报规范.md"
+    reference = reference_path.read_text(encoding="utf-8")
+    template = (PROJECT_ROOT / "05_共享模板/今日招聘简报模板.md").read_text(encoding="utf-8")
+
+    assert "[今日招聘优先级与行动简报规范](references/今日招聘优先级与行动简报规范.md)" in skill
+    assert "需要用户决定" in skill and "AI 可以直接继续" in skill and "需要外部信息或等待" in skill
+    assert "prepare-daily-brief" in skill
+    for heading in (
+        "## 3. 三类行动所有者",
+        "## 5. 跨岗位优先级判断",
+        "## 8. 前三事项的完整结构",
+        "## 11. 最小用户决策集",
+        "## 14. 可以稍后处理",
+        "## 20. 写入前自检",
+    ):
+        assert heading in reference
+    for field in ("为什么是现在", "今天不处理的实际影响", "你的最小输入", "重新进入优先队列的触发条件"):
+        assert field in template
+
+
+def test_recruiting_workbench_controller_routes_and_continues_tasks() -> None:
+    skill_path = PROJECT_ROOT / ".agents/skills/run-recruiting-workbench/SKILL.md"
+    reference_path = (
+        PROJECT_ROOT / ".agents/skills/run-recruiting-workbench/references/招聘意图路由与连续执行规范.md"
+    )
+    metadata_path = PROJECT_ROOT / ".agents/skills/run-recruiting-workbench/agents/openai.yaml"
+    skill = skill_path.read_text(encoding="utf-8")
+    reference = reference_path.read_text(encoding="utf-8")
+    metadata = metadata_path.read_text(encoding="utf-8")
+    agents = (PROJECT_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+
+    assert "[招聘意图路由与连续执行规范](references/招聘意图路由与连续执行规范.md)" in skill
+    assert "总入口只负责理解、路由、编排、连续推进和统一交付" in skill
+    assert "前两个" in skill and "按刚才建议执行" in skill
+    assert "证据已足够，可以决定" in skill
+    assert "结果 → 关键判断 → 只需用户决定 → 接下来" in agents
+    assert "$run-recruiting-workbench" in agents
+    assert "招聘工作台总入口" in metadata
+    assert "$run-recruiting-workbench" in metadata
+
+    professional_skills = {
+        "create-position",
+        "process-resumes",
+        "compare-candidates",
+        "confirm-screening",
+        "prepare-interview",
+        "analyze-interview",
+        "generate-final-brief",
+        "close-candidate",
+        "search-history",
+        "calibrate-position",
+        "learn-recruiting-preferences",
+        "daily-recruiting-brief",
+    }
+    for name in professional_skills:
+        assert f"${name}" in skill or f"${name}" in reference
+
+    for heading in (
+        "## 3. 用户意图的六种形态",
+        "## 5. 单环节路由表",
+        "## 6. 多环节组合路径",
+        "## 7. 用户是否需要介入",
+        "## 8. 连续对话与指代",
+        "## 10. 统一对话结果",
+        "## 13. 待确认与异常体验",
+        "## 17. 执行前后自检",
+    ):
+        assert heading in reference
+
+
+def test_claude_workbench_controller_uses_native_skill_calls() -> None:
+    skill = (PROJECT_ROOT / ".claude/skills/run-recruiting-workbench/SKILL.md").read_text(encoding="utf-8")
+    reference = (
+        PROJECT_ROOT / ".claude/skills/run-recruiting-workbench/references/招聘意图路由与连续执行规范.md"
+    ).read_text(encoding="utf-8")
+    for name in ("process-resumes", "confirm-screening", "prepare-interview", "daily-recruiting-brief"):
+        assert f"/{name}" in skill or f"/{name}" in reference
+        assert f"${name}" not in skill
+        assert f"${name}" not in reference
 
 
 SKILL_REFERENCE_PATTERN = re.compile(r"\$[a-z][a-z0-9-]*")

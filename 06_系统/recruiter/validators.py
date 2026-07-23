@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -123,6 +124,74 @@ def validate_workspace(root: Path) -> list[ValidationIssue]:
                     "终面简报缺少人工最终录用决定边界",
                 )
             )
+
+    preference_path = root / "00_公司认知" / "个人招聘判断偏好.md"
+    if preference_path.exists():
+        try:
+            preference_data, preference_body = read_markdown(preference_path)
+            confirmed_entries = list(
+                re.finditer(r"(?m)^### (PREF-[^\n]+)\n(.*?)(?=^### |^## |\Z)", preference_body, re.DOTALL)
+            )
+            required_fields = (
+                "状态",
+                "类型",
+                "适用范围",
+                "完整规则",
+                "影响环节",
+                "证据要求",
+                "例外与不适用情形",
+                "已知反例",
+                "不得进一步推出",
+                "来源案例与用户原话",
+                "确认日期",
+            )
+            for entry in confirmed_entries:
+                entry_id, block = entry.group(1), entry.group(2)
+                for field in required_fields:
+                    if f"- {field}：" not in block:
+                        issues.append(
+                            ValidationIssue(
+                                "ERROR",
+                                "PREFERENCE_STRUCTURE",
+                                str(preference_path.relative_to(root)),
+                                f"{entry_id} 缺少字段：{field}",
+                            )
+                        )
+            recorded_count = int(preference_data.get("confirmed_recruiting_preferences") or 0)
+            if recorded_count != len(confirmed_entries):
+                issues.append(
+                    ValidationIssue(
+                        "ERROR",
+                        "PREFERENCE_COUNT",
+                        str(preference_path.relative_to(root)),
+                        f"frontmatter 记录 {recorded_count} 条，实际结构化偏好 {len(confirmed_entries)} 条",
+                    )
+                )
+        except Exception as exc:
+            issues.append(ValidationIssue("ERROR", "PREFERENCE_FILE", str(preference_path.relative_to(root)), str(exc)))
+
+    daily_brief = root / "04_全局索引" / "今日招聘简报.md"
+    if daily_brief.exists():
+        daily_text = daily_brief.read_text(encoding="utf-8")
+        for heading in (
+            "## 一句话结论",
+            "## 一、现在最值得关注的事",
+            "## 二、只等你决定",
+            "## 三、AI 可以直接继续",
+            "## 四、等待外部信息",
+            "## 五、岗位注意力概览",
+            "## 六、可以放心稍后处理",
+            "## 七、事实边界与信息来源",
+        ):
+            if heading not in daily_text:
+                issues.append(
+                    ValidationIssue(
+                        "ERROR",
+                        "DAILY_BRIEF_STRUCTURE",
+                        str(daily_brief.relative_to(root)),
+                        f"缺少今日简报字段：{heading}",
+                    )
+                )
 
     index = root / "04_全局索引" / "全部候选人.csv"
     if index.exists():

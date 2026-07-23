@@ -1,13 +1,124 @@
 ---
 name: daily-recruiting-brief
-description: Create a concise, prioritized daily recruiting brief from the local workspace. Use when the user asks what to handle today, what deserves attention, for a recruiting status overview, next actions, blockers, or a quick review of active positions and candidates.
+description: 从本地岗位、候选人、待处理材料和待确认事项中生成面向当前用户的每日招聘注意力清单，跨岗位判断什么最值得现在处理、什么需要用户决定、什么 AI 可以直接继续、什么可以放心稍后处理。适用于用户询问今天先做什么、当前招聘重点、有哪些阻塞、哪些候选人快漏掉、下一步行动或希望快速查看招聘全局时。
 ---
 
-# Daily Recruiting Brief
+# 生成今日招聘简报
 
-1. Read `AGENTS.md`, `00_公司认知/个人招聘判断偏好.md`, all active `岗位.md`, candidate overviews, pending batch summaries, interview reports, and `04_全局索引/待确认事项.md`. Rebuild indexes first only when source state has changed.
-2. Prioritize by decision value, not file age alone: unreviewed strong candidates, decisions blocking progress, upcoming interview preparation, unresolved material conflicts, then lower-value housekeeping.
-3. Write `04_全局索引/今日招聘简报.md` using `05_共享模板/今日招聘简报模板.md`. It is a regenerable view, not a new source of truth.
-4. Lead with at most three items the user should care about now. For each, state why it matters and the next useful action. Mention routine file operations only on failure or when asked.
-5. Include a compact position overview and decisions waiting for the user. Do not manufacture deadlines or urgency absent from the files.
-6. In conversation, answer naturally and directly. End with the smallest set of decisions the user needs to make; do not recite every scanned file.
+## 目标
+
+今日简报不是状态周报，也不是把所有岗位和候选人重新列一遍。它要替用户管理注意力：在现有信息下，指出现在最值得投入的少数事项、为什么是现在、由谁采取什么最小动作，以及哪些事情暂时不处理也不会损失重要机会。
+
+开始前完整阅读 [今日招聘优先级与行动简报规范](references/今日招聘优先级与行动简报规范.md)，并按其中的优先级、行动所有者、时间边界和输出规则执行。
+
+## 执行流程
+
+### 1. 刷新事实底稿
+
+如主档案自上次索引后发生变化，先运行：
+
+```bash
+python -m recruiter --root . rebuild-index
+```
+
+再运行：
+
+```bash
+python -m recruiter --root . prepare-daily-brief
+```
+
+该命令只从 Markdown 主档案和待处理目录生成事实底稿，不进行开放式招聘判断。随后必须读取底稿引用的原始文件，不能只凭 CSV 或自动汇总排序。
+
+### 2. 读取本次决策上下文
+
+至少读取：
+
+- `00_公司认知/个人招聘判断偏好.md`，只应用已确认的交互偏好；
+- 所有在招岗位的正式 `岗位.md`；
+- 活跃候选人总览、简历建议、人工结论和当前轮次；
+- 岗位候选人比较、待人工确认汇总；
+- 即将发生或明确有日期的面试、终面和待验证事项；
+- `04_全局索引/待确认事项.md`；
+- 待处理简历、面试纪要和待确认文件；
+- 已记录的真实截止时间、业务风险和用户近期明确目标。
+
+不需要逐份重读全部原始材料；只有某事项进入前三、存在冲突或需要给出倾向时，才回到对应主档案和关键证据。
+
+### 3. 先区分三类行动所有者
+
+每个事项必须归入：
+
+1. **需要用户决定**：录用取舍、人工结论、画像变更、跨岗位移动或其他权限动作；
+2. **AI 可以直接继续**：整理、分析、生成报告、重建索引、处理明确匹配材料；
+3. **需要外部信息或等待**：面试尚未发生、候选人尚未回复、业务尚未给出事实。
+
+不要把 AI 本来可以直接完成的整理工作变成用户待办，也不要把必须由用户决定的事项伪装成 AI 自动动作。
+
+### 4. 跨岗位判断优先级
+
+不用分数，依次考虑：
+
+- 是否阻塞一个重要招聘决定或后续流程；
+- 是否存在材料已足够、现在即可做出的高价值判断；
+- 是否有来源明确的时间窗口、面试安排或候选人流失风险；
+- 延后是否会损失信息、机会或造成重复成本；
+- 下一步是否小而明确，能够快速解除阻塞；
+- 事项是否可逆，以及晚一点处理是否几乎没有代价。
+
+文件更旧、状态更红或候选人更多不自动代表更优先。没有来源的日期、紧迫感和候选人意愿不得猜测。
+
+### 5. 只保留真正值得关注的前三项
+
+前三项可以少于三项，不为了填满制造任务。每项必须说明：
+
+- 需要处理什么；
+- 为什么是现在；
+- 如果今天不处理会发生什么；
+- 下一步最小动作；
+- 行动所有者；
+- 关键依据和本地路径。
+
+同一决策链上的多个文件操作合并为一个业务事项，不要把“读简历、更新索引、生成表格”拆成三个优先事项。
+
+### 6. 把用户决策压缩到最小
+
+对等待用户决定的事项，给出：
+
+- 需要选择的明确选项；
+- AI 当前倾向；
+- 最强支持证据与最大风险；
+- 用户只需补充的一句话或一个选择；
+- 不决定时的实际影响。
+
+如果 AI 还可以先补材料或完成分析，就先做完，不提前打断用户。
+
+### 7. 明确哪些可以稍后处理
+
+列出一至三类看似存在但当前无需占用注意力的事项，并说明为何可以延后，例如：
+
+- 没有真实期限且不阻塞流程；
+- 等待外部事实，当前重复分析不会增加信息；
+- 只是可重建索引或文件整理；
+- 当前没有足够证据形成有价值决定。
+
+“可以稍后”不是遗忘，要写明重新进入优先队列的触发条件。
+
+### 8. 写入正式业务视图
+
+按 `05_共享模板/今日招聘简报模板.md` 更新：
+
+`04_全局索引/今日招聘简报.md`
+
+它是可重建视图，不是新的事实来源。不得在简报中创造岗位状态、候选人结论、截止日期或人工决定。
+
+## 对话输出
+
+直接告诉用户：
+
+1. 今天最值得做的一件事；
+2. 其余一至两件真正重要的事；
+3. AI 可以不打扰用户直接继续做什么；
+4. 最小用户决策集；
+5. 可以放心稍后处理什么。
+
+如果当前没有重要事项，明确说“今天没有必须处理的招聘决定”，不要为了显得有用制造紧迫感。除非用户追问，不汇报扫描文件、CLI、索引和模板生成过程。

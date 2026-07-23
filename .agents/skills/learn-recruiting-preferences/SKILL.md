@@ -1,15 +1,141 @@
 ---
 name: learn-recruiting-preferences
-description: Capture, propose, confirm, and apply the user's personal recruiting judgment preferences from explicit feedback and recurring decision differences. Use when the user says what they value, rejects the AI assistant's reasoning, asks the assistant to remember a hiring preference, or wants analysis of how their decisions differ from prior AI recommendations.
+description: 从用户对候选人、岗位和 AI 判断的明确反馈中识别个人招聘判断偏好，区分个案决定、岗位专属标准、跨岗位偏好、交互偏好和不能学习的推断，形成带适用范围、证据要求、例外、反例与实际影响的精确规则；支持提出、确认、拒绝、撤销和审计偏好。适用于用户解释为何赞同或反对某个判断、要求记住选人标准、反复纠正 AI 推理、确认一条偏好，或询问自己的判断模式时。
 ---
 
-# Learn Recruiting Preferences
+# 学习个人招聘判断偏好
 
-1. Read `AGENTS.md`, `00_公司认知/个人招聘判断偏好.md`, the user's exact feedback, and the relevant position and candidate evidence.
-2. Distinguish a case decision from a reusable preference. One disagreement is evidence about one case unless the user explicitly generalizes it or a recurring pattern appears across multiple cases.
-3. Normalize a possible preference into a short rule with: scope, positive signal or concern, evidence standard, known exception, source case, and status.
-4. Put unconfirmed patterns under `待确认偏好候选`; do not let them affect formal judgments. Ask one concise confirmation question containing the exact proposed wording.
-5. Move a rule to `已确认偏好` only after explicit approval. The user’s approval of the exact wording satisfies confirmation; record the date and update `07_运行记录/系统变更记录.md`.
-6. When the user rejects a proposal, retain only a brief rejected note if it prevents the same mistaken inference; never treat it as an active rule.
-7. Never encode protected-characteristic discrimination, unsupported stereotypes, or a preference inferred only from silence. Keep role-specific rules scoped to that role family.
-8. After updating a confirmed preference, explain in one sentence how it will change future screening, comparison, interview preparation, or final briefs.
+## 目标
+
+偏好学习不是迎合用户，也不是把每次“喜欢、不喜欢、推进、淘汰”永久保存。它要识别用户稳定、可解释、与招聘结果相关的取舍规则，让后续筛选、比较、面试和终面更接近用户的真实判断，同时保留岗位标准、事实证据和人工最终决定的边界。
+
+开始前完整阅读 [个人招聘偏好识别与应用规范](references/个人招聘偏好识别与应用规范.md)，并按其中的分类、确认、冲突、反例和应用审计规则执行。
+
+## 执行流程
+
+### 1. 保留用户反馈原意
+
+读取：
+
+- 用户本次完整原话；
+- `00_公司认知/个人招聘判断偏好.md`；
+- 相关正式 `岗位.md`；
+- 涉及候选人的原始材料、AI 建议、人工结论和分歧理由；
+- 同类历史分歧与已确认偏好（若存在）。
+
+先记录用户在本案中纠正了什么，不要立即改写成通用规则。不得为使反馈“更合理”而补充用户未表达的动机。
+
+### 2. 判断反馈属于哪一层
+
+必须先区分：
+
+1. **个案决定**：只改变当前候选人的正式结论或理由；
+2. **岗位专属标准**：只属于某个正式岗位画像，应走岗位校准或画像变更；
+3. **岗位族偏好**：只对一类相近岗位适用；
+4. **跨岗位招聘偏好**：用户明确希望未来普遍采用的取舍规则；
+5. **交互偏好**：用户希望 AI 如何汇报、追问或组织工作；
+6. **不可学习内容**：沉默、一次情绪、无证据刻板印象、受保护特征或与工作结果无关的代理变量。
+
+一次分歧默认是个案证据。重复出现的模式只能形成待确认候选，不能自动生效；用户明确说“以后都这样判断”时，也必须展示准确规则和适用范围后再确认。
+
+### 3. 形成可执行规则候选
+
+每条候选规则必须包含：
+
+- 类型与适用范围；
+- 用户真正看重或规避的可观察信号；
+- 它会影响准入、排序、证据要求、面试验证还是表达方式；
+- 什么材料算支持，什么仍只是主张；
+- 已知例外、不适用情形和反例；
+- 来源案例与用户原话；
+- 不能从这条规则进一步推出什么；
+- 与公司标准、岗位画像或其他偏好的潜在冲突。
+
+禁止只写“更看重主人翁意识”“不喜欢大厂背景”“重视稳定性”等模糊或代理变量式规则。必须改写为可观察行为和决策取舍。
+
+### 4. 做反例和过度泛化检查
+
+提出前至少检查：
+
+- 同一信号是否存在结果相反的历史案例；
+- 用户反对的是证据不足，还是能力本身不重要；
+- 当前反馈是否只适用于某个岗位阶段、职级或业务环境；
+- 这条规则是否会误伤经历不同但能力等价的人；
+- 如果规则早已生效，过去哪些候选人的判断会改变。
+
+无法回答时降低规则范围或只保留个案结论。
+
+### 5. 只问一个精确确认问题
+
+向用户展示：
+
+1. 本案结论；
+2. 拟学习规则的完整文字；
+3. 适用范围；
+4. 它以后会怎样改变判断；
+5. 一个最重要的例外。
+
+然后只问：“是否确认以后按这条完整规则执行？”不要把多个规则捆绑确认，也不要只问“要不要记住”。
+
+### 6. 按权限落盘
+
+`--type` 必须根据前述分类准确选择 `通用招聘判断`、`岗位族专项` 或 `交互偏好` 中的一项。以下以岗位族偏好为例。
+
+首次提出但尚未确认时运行：
+
+```bash
+python -m recruiter --root . propose-preference \
+  --type "岗位族专项" \
+  --scope "适用范围" \
+  --rule "完整可执行规则" \
+  --effect "将影响什么判断" \
+  --evidence-standard "什么证据才算支持" \
+  --exceptions "例外和不适用情形" \
+  --counterexample "已知反例或待寻找反例" \
+  --source "用户原话和来源案例"
+```
+
+该命令只生成待确认事项，不让规则影响正式判断。
+
+用户明确确认同一条完整规则后运行：
+
+```bash
+python -m recruiter --root . resolve-preference \
+  --decision "确认" \
+  --type "岗位族专项" \
+  --scope "适用范围" \
+  --rule "与待确认事项完全一致的规则" \
+  --effect "将影响什么判断" \
+  --evidence-standard "什么证据才算支持" \
+  --exceptions "例外和不适用情形" \
+  --counterexample "已知反例或待寻找反例" \
+  --source "用户原话和来源案例"
+```
+
+用户拒绝时使用 `--decision "拒绝"`；只有用户明确要求避免未来再次产生同类错误推断时，才增加 `--retain-rejection` 保存简短拒绝说明。
+
+修改或撤销已确认规则属于公司级长期认知变更，必须先生成新的待确认事项，再按用户确认的精确范围执行，不能用新规则静默覆盖旧规则。
+
+### 7. 应用偏好时留下审计
+
+以后使用已确认偏好时必须说明：
+
+- 使用了哪条偏好 ID；
+- 为什么本岗位和候选人落在适用范围；
+- 它具体改变了哪一项排序、证据要求或验证计划；
+- 如果不使用，该判断会有什么不同；
+- 是否与正式岗位画像冲突。
+
+偏好不得覆盖公司或岗位硬性条件，不得改写事实，不得自动改变人工正式结论。
+
+## 对话输出
+
+根据状态直接回答：
+
+- **仅个案**：说明本次结论已理解，但不会泛化；
+- **待确认候选**：展示完整规则、范围、影响和例外，只问一次确认；
+- **已确认**：说明规则 ID、保存位置和以后将影响什么；
+- **已拒绝**：说明不会使用，并保留或不保留拒绝记录；
+- **冲突**：明确指出与岗位画像或既有偏好的冲突，让用户选择修改哪一层。
+
+不要用“我会记住你的偏好”代替可核验的规则和落盘结果。
