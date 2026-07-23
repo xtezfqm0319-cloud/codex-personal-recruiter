@@ -1,13 +1,98 @@
 ---
 name: search-history
-description: Search archived local candidate records and explain reusable talent recommendations with evidence. Use for finding prior candidates, reviewing someone's previous stage, or scanning history when a new position is created.
+description: 按当前招聘问题只读检索本地历史人才，结合候选人归档摘要、原岗位证据、流程结束原因和当前岗位标准，判断谁值得优先重看、适合什么场景、旧结论哪些仍有效及哪些已经过时。适用于查找历史候选人、回顾某人此前流程、为新岗位扫描可复用人才，或按能力、经历、结果和结束原因进行自然语言查询。
 ---
 
-# Search History
+# 搜索和复用历史人才
 
-1. Run `rebuild-index` so the cache reflects Markdown masters.
-2. Read confirmed personal preferences and the current role need when one exists. Run `search-history --query "关键词"` for a first pass, then read each matched candidate overview, resume analysis, interview evidence, and final result.
-3. Rank the strongest reusable people by current decision value. Explain why each may be reusable, what was validated, why the prior process ended, how the current need differs, and what remains unverified.
-4. Cite local paths. Do not treat a keyword hit as proof of fit.
-5. Keep the operation read-only. Never move or add a historical candidate to a new position without explicit user instruction; cross-position movement also requires a pending confirmation.
-6. In conversation, lead with who is worth reconsidering now and why. Do not present raw keyword hits as a talent list.
+## 目标
+
+历史人才检索不是把关键词命中者列出来，而是回答当前业务问题：现在谁值得重新投入时间，为什么，过去验证了什么，过去为什么没有继续，当前岗位与原岗位有什么关键差异，以及重新接触前还有什么必须确认。
+
+开始前完整阅读 [历史人才检索与复用判断规范](references/历史人才检索与复用判断规范.md)，并按其中的召回、重判、排序和输出规则执行。
+
+## 执行流程
+
+### 1. 明确本次查询意图
+
+先判断用户是在：
+
+- 查询指定候选人的历史；
+- 为当前或新建岗位找可复用人才；
+- 按关键能力、行业、项目或场景找人；
+- 查找因某类原因结束的人；
+- 回顾某批候选人的历史判断。
+
+只有缺少目标岗位或关键条件会明显改变结果时才追问；其他情况按现有信息直接查。
+
+### 2. 读取当前决策上下文
+
+读取 `00_公司认知/个人招聘判断偏好.md`。存在当前岗位时，必须读取该岗位正式 `岗位.md`，把查询转成当前岗位的一票否决条件、能力底线、决定性排序因素、证据标准和可放宽条件。不存在正式岗位时，只按用户明确查询维度回答，不擅自补一个完整岗位画像。
+
+### 3. 重建索引并分词召回
+
+先运行：
+
+```bash
+python -m recruiter --root . rebuild-index
+```
+
+把自然语言需求提炼为两到五组有辨识度的召回词，必要时分别搜索候选人姓名、关键任务、能力证据、原岗位和结束原因：
+
+```bash
+python -m recruiter --root . search-history --query "关键词组合" --position "当前岗位名"
+```
+
+CLI 命中只用于召回，不能直接作为匹配结论。不能只看 CSV；必须继续读 Markdown 主档案。
+
+### 4. 回到每名候选人的原始证据
+
+对进入复核范围的人，至少读取：
+
+- `归档摘要.md`；
+- `00_候选人总览.md`；
+- `01_简历分析.md`；
+- 关键面试报告和人工结论；
+- 原岗位 `岗位.md`；
+- 最终结果、结束原因与复用等级。
+
+需要核实关键主张时再读原始简历或原始纪要，不把旧 AI 摘要重复出现当作新增证据。
+
+### 5. 按当前需求重新判断
+
+旧岗位上的“强推、淘汰、面试通过”均不能直接继承为当前岗位结论。逐人判断：
+
+1. 原来验证过的能力是否正好对应当前任务；
+2. 旧证据是行为事实、候选人主张还是评价意见；
+3. 原流程结束是能力原因、岗位差异还是外部条件；
+4. 当前岗位相对原岗位新增、删减或改变了什么；
+5. 资料时效、当前意愿、可用性和近况中哪些尚未验证。
+
+### 6. 给出当前复用优先级
+
+只使用四类：
+
+- `值得优先重看`；
+- `值得重新评估`；
+- `补一项关键信息后再看`；
+- `当前不建议复用`。
+
+每名候选人都要给最强支持证据、最强反证或边界、原流程结束原因、当前岗位差异、最小下一步和可能反转条件。多名候选人默认做相对排序，并解释相邻人选的决定性差异；证据不足时允许并列，不制造精确评分。
+
+### 7. 保持只读边界
+
+不得自动把历史候选人加入新岗位，不得复制、移动或跨岗位改写候选人档案，也不得修改旧人工结论。用户明确要求重新启用某人时，跨岗位动作仍需先进入 `04_全局索引/待确认事项.md`。
+
+如为正式岗位完成了重要复用扫描，将业务视图写入该岗位的 `历史人才复用建议.md`；主档案仍以历史候选人原目录为准。
+
+## 对话输出
+
+先回答“现在最值得重看谁”，而不是展示搜索过程：
+
+1. 当前建议顺序；
+2. 每人的复用价值、原流程为何结束和当前差异；
+3. 不能直接沿用的旧结论；
+4. 最小下一步与待确认信息；
+5. 未命中时说明是“现有档案没有足够证据”，不要说“人才库里没有这样的人”。
+
+所有关键判断引用本地路径。

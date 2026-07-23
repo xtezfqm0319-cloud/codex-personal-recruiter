@@ -1,4 +1,4 @@
 interface:
   display_name: "搜索历史人才"
-  short_description: "Search archived talent records with supporting evidence"
-  default_prompt: "Use $search-history to find reusable historical candidates."
+  short_description: "按当前招聘需求重判本地历史候选人"
+  default_prompt: "使用 $search-history 从本地历史档案中找出现在值得重新评估的人，并说明证据、边界和下一步。"

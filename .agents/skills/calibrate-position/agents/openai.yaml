@@ -1,4 +1,4 @@
 interface:
   display_name: "校准岗位"
-  short_description: "Propose evidence-based position profile calibration"
-  default_prompt: "Use $calibrate-position to analyze whether the position profile needs calibration."
+  short_description: "从完整招聘结果中识别真实偏差并提出受控修改"
+  default_prompt: "使用 $calibrate-position 分析这个岗位的画像、筛选和面试判断是否需要校准，只生成有证据的建议，不直接修改正式画像。"
