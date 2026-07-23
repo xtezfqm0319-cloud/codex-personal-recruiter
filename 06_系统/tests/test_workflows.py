@@ -16,8 +16,11 @@ from recruiter.workflows import (
     generate_final_brief,
     ingest_interviews,
     ingest_resumes,
+    prepare_daily_brief,
+    propose_recruiting_preference,
     record_interview_analysis,
     record_resume_analysis,
+    resolve_recruiting_preference,
     search_history,
     set_interview_decision,
 )
@@ -321,3 +324,101 @@ def test_interview_decision_change_requires_matching_reconfirmation(workspace: P
     assert overview["interview_human_decision_reasons"]["1"] == "用户希望比较其他候选人"
     pending = (workspace / "04_全局索引" / "待确认事项.md").read_text(encoding="utf-8")
     assert "状态：已确认并执行" in pending
+
+
+def test_preference_proposal_does_not_apply_until_exact_confirmation(workspace: Path) -> None:
+    preference_path = workspace / "00_公司认知" / "个人招聘判断偏好.md"
+    before = preference_path.read_text(encoding="utf-8")
+    values = {
+        "preference_type": "岗位族专项",
+        "scope": "需要独立判断的产品岗位",
+        "rule": "团队结果不能直接证明候选人的个人贡献，必须看到本人做出的关键取舍和结果边界。",
+        "effect": "影响证据置信度、岗位内排序和面试验证",
+        "evidence_standard": "材料至少说明本人识别的问题、关键选择、推动动作和结果归因",
+        "exceptions": "岗位只要求明确执行时，不把独立决策作为能力底线",
+        "counterexample": "候选人不是最终负责人，但能证明职责范围内的关键取舍和结果",
+        "source": "用户明确表示：以后产品岗位都按这条完整规则判断。",
+    }
+    pending_id = propose_recruiting_preference(workspace, **values)
+    assert pending_id.startswith("PENDING-")
+    assert preference_path.read_text(encoding="utf-8") == before
+    pending = (workspace / "04_全局索引" / "待确认事项.md").read_text(encoding="utf-8")
+    assert values["rule"] in pending
+    assert "确认前不得用于正式判断" in pending
+
+    resolve_recruiting_preference(workspace, "确认", **values)
+    data, body = read_markdown(preference_path)
+    assert data["confirmed_recruiting_preferences"] == 1
+    assert f"### {pending_id.replace('PENDING-', 'PREF-', 1)}" in body
+    assert f"- 完整规则：{values['rule']}" in body
+    assert f"- 已知反例：{values['counterexample']}" in body
+    assert "状态：已确认并执行" in (workspace / "04_全局索引" / "待确认事项.md").read_text(encoding="utf-8")
+    assert not [issue for issue in validate_workspace(workspace) if issue.level == "ERROR"]
+
+
+def test_preference_resolution_requires_matching_pending_proposal(workspace: Path) -> None:
+    with pytest.raises(PermissionError, match="No matching pending"):
+        resolve_recruiting_preference(
+            workspace,
+            "确认",
+            "通用招聘判断",
+            "所有岗位",
+            "不把团队结果直接归因给个人。",
+            "影响证据置信度",
+            "需要个人行为证据",
+            "职责范围内的明确贡献仍有效",
+            "尚未找到反例",
+            "用户原话",
+        )
+
+
+def test_rejected_preference_is_not_active_by_default(workspace: Path) -> None:
+    preference_path = workspace / "00_公司认知" / "个人招聘判断偏好.md"
+    before = preference_path.read_text(encoding="utf-8")
+    values = {
+        "preference_type": "交互偏好",
+        "scope": "日常招聘汇报",
+        "rule": "每天固定列满十项任务。",
+        "effect": "影响简报长度",
+        "evidence_standard": "用户对完整规则的明确确认",
+        "exceptions": "没有足够事项时不适用",
+        "counterexample": "用户只需要一个决定时，十项会增加负担",
+        "source": "AI 根据一次对话提出，用户尚未确认。",
+    }
+    propose_recruiting_preference(workspace, **values)
+    resolve_recruiting_preference(workspace, "拒绝", **values)
+    assert preference_path.read_text(encoding="utf-8") == before
+
+
+def test_prepare_daily_brief_builds_fact_sheet_without_invented_priority(workspace: Path) -> None:
+    add_position_and_resume(workspace)
+    ingest_resumes(workspace)
+    record_resume_analysis(
+        workspace,
+        "AI产品经理",
+        "林晓",
+        "推",
+        "有产品闭环证据。",
+        "材料记录企业知识助手上线。",
+        "个人贡献边界不完整。",
+        "关键取舍待验证。",
+        "符合",
+    )
+    path = prepare_daily_brief(workspace)
+    text = path.read_text(encoding="utf-8")
+    for heading in (
+        "## 一句话结论",
+        "## 一、现在最值得关注的事",
+        "## 二、只等你决定",
+        "## 三、AI 可以直接继续",
+        "## 四、等待外部信息",
+        "## 五、岗位注意力概览",
+        "## 六、可以放心稍后处理",
+        "## 七、事实边界与信息来源",
+    ):
+        assert heading in text
+    assert "AI产品经理 / 林晓" in text
+    assert "推进 / 待定 / 淘汰" in text
+    assert "不凭文件时间、数量或缺失字段制造优先级" in text
+    assert "确定性事实底稿" in text
+    assert not [issue for issue in validate_workspace(workspace) if issue.level == "ERROR"]

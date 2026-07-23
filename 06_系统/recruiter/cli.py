@@ -16,8 +16,11 @@ from .workflows import (
     ingest_interviews,
     ingest_resumes,
     init_workspace,
+    prepare_daily_brief,
+    propose_recruiting_preference,
     record_interview_analysis,
     record_resume_analysis,
+    resolve_recruiting_preference,
     search_history,
     set_interview_decision,
 )
@@ -137,6 +140,33 @@ def build_parser() -> argparse.ArgumentParser:
     calibration = sub.add_parser("calibrate-position", help="generate calibration evidence table without changing profile")
     calibration.add_argument("--position", required=True)
 
+    preference = sub.add_parser("propose-preference", help="queue a complete personal recruiting preference for confirmation")
+    preference.add_argument("--type", required=True, choices=["通用招聘判断", "岗位族专项", "交互偏好"])
+    preference.add_argument("--scope", required=True)
+    preference.add_argument("--rule", required=True)
+    preference.add_argument("--effect", required=True)
+    preference.add_argument("--evidence-standard", required=True)
+    preference.add_argument("--exceptions", required=True)
+    preference.add_argument("--counterexample", required=True)
+    preference.add_argument("--source", required=True)
+
+    resolution = sub.add_parser("resolve-preference", help="confirm or reject an exact pending preference proposal")
+    resolution.add_argument("--decision", required=True, choices=["确认", "拒绝"])
+    resolution.add_argument("--type", required=True, choices=["通用招聘判断", "岗位族专项", "交互偏好"])
+    resolution.add_argument("--scope", required=True)
+    resolution.add_argument("--rule", required=True)
+    resolution.add_argument("--effect", required=True)
+    resolution.add_argument("--evidence-standard", required=True)
+    resolution.add_argument("--exceptions", required=True)
+    resolution.add_argument("--counterexample", required=True)
+    resolution.add_argument("--source", required=True)
+    resolution.add_argument(
+        "--retain-rejection",
+        action="store_true",
+        help="retain a brief rejected note only when it prevents the same mistaken inference",
+    )
+
+    sub.add_parser("prepare-daily-brief", help="prepare a deterministic daily recruiting fact sheet for AI prioritization")
     sub.add_parser("rebuild-index", help="rebuild every CSV and position table from Markdown masters")
     sub.add_parser("validate", help="validate workspace structure, evidence and policy rules")
     return parser
@@ -270,6 +300,37 @@ def main(argv: list[str] | None = None) -> int:
             _print(search_history(root, args.query, args.position))
         elif args.command == "calibrate-position":
             path = calibrate_position(root, args.position)
+            _print({"status": "ok", "path": path.relative_to(root)})
+        elif args.command == "propose-preference":
+            pending_id = propose_recruiting_preference(
+                root,
+                args.type,
+                args.scope,
+                args.rule,
+                args.effect,
+                args.evidence_standard,
+                args.exceptions,
+                args.counterexample,
+                args.source,
+            )
+            _print({"status": "pending_confirmation", "pending_id": pending_id})
+        elif args.command == "resolve-preference":
+            path = resolve_recruiting_preference(
+                root,
+                args.decision,
+                args.type,
+                args.scope,
+                args.rule,
+                args.effect,
+                args.evidence_standard,
+                args.exceptions,
+                args.counterexample,
+                args.source,
+                args.retain_rejection,
+            )
+            _print({"status": "ok", "decision": args.decision, "path": path.relative_to(root)})
+        elif args.command == "prepare-daily-brief":
+            path = prepare_daily_brief(root)
             _print({"status": "ok", "path": path.relative_to(root)})
         elif args.command == "rebuild-index":
             _print(rebuild_indexes(root))

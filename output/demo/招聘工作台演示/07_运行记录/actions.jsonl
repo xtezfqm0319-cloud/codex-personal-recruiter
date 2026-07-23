@@ -1,16 +1,21 @@
-{"time": "2026-07-22T15:11:23+08:00", "action": "workspace.init"}
-{"time": "2026-07-22T15:11:23+08:00", "action": "position.created", "position": "企业AI产品经理", "position_id": "POS-2026-001"}
-{"time": "2026-07-22T15:11:23+08:00", "action": "history.searched", "query": "企业AI产品经理", "position": "企业AI产品经理", "count": 0}
-{"time": "2026-07-22T15:11:23+08:00", "action": "resume.ingested", "candidate": "陈曦", "position": "企业AI产品经理", "path": "02_岗位/企业AI产品经理/候选人/陈曦/陈曦-企业AI产品经理.txt", "sha256": "dd82abce7b49d6e17b2d814892629f9c4adab248e093128e89ea4ee691c2b5d1", "extraction_method": "直接读取", "extraction_status": "通过", "ocr_pages": [], "unresolved_pages": []}
-{"time": "2026-07-22T15:11:23+08:00", "action": "resume.analysis_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "recommendation": "强推"}
-{"time": "2026-07-22T15:11:23+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 0}
-{"time": "2026-07-22T15:11:23+08:00", "action": "screening.confirmed", "candidate": "陈曦", "position": "企业AI产品经理", "decision": "推进", "reason": ""}
-{"time": "2026-07-22T15:11:23+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 0}
-{"time": "2026-07-22T15:11:23+08:00", "action": "interview.ingested", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1, "sha256": "3d6daf3bd6b1607d04e0e4b6777c37e5494e9e015f90f858858bd9826433cc4d", "extraction_method": "直接读取", "extraction_status": "通过", "ocr_pages": [], "unresolved_pages": []}
-{"time": "2026-07-22T15:11:23+08:00", "action": "interview.analysis_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1}
-{"time": "2026-07-22T15:11:23+08:00", "action": "interview.decision_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1, "decision": "通过，进入终面", "reason": ""}
-{"time": "2026-07-22T15:11:23+08:00", "action": "final_brief.generated", "candidate": "陈曦", "position": "企业AI产品经理", "path": "02_岗位/企业AI产品经理/候选人/陈曦/03_终面/终面简报.md"}
-{"time": "2026-07-22T15:11:23+08:00", "action": "candidate.archived", "candidate": "陈曦", "position": "企业AI产品经理", "result": "HC暂停，未录用；面试通过，人才保留", "closure_category": "HC、预算或业务变化", "reusable": true, "reuse_level": "优先复用", "path": "03_简历库/企业AI产品经理/陈曦"}
-{"time": "2026-07-22T15:11:23+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 1}
-{"time": "2026-07-22T15:11:23+08:00", "action": "history.searched", "query": "企业 AI 知识助手", "position": "", "count": 1}
-{"time": "2026-07-22T15:11:23+08:00", "action": "position.calibration_generated", "position": "企业AI产品经理", "records": 1}
+{"time": "2026-07-23T15:39:18+08:00", "action": "workspace.init"}
+{"time": "2026-07-23T15:39:18+08:00", "action": "pending.created", "pending_id": "PENDING-20260723153918336813", "kind": "确认个人招聘偏好", "subject": "岗位族专项｜需要独立判断的产品岗位"}
+{"time": "2026-07-23T15:39:18+08:00", "action": "preference.proposed", "pending_id": "PENDING-20260723153918336813", "preference_type": "岗位族专项", "scope": "需要独立判断的产品岗位", "rule": "团队结果不能直接证明候选人的个人贡献，必须看到本人做出的关键取舍和结果边界。"}
+{"time": "2026-07-23T15:39:18+08:00", "action": "pending.resolved", "pending_id": "PENDING-20260723153918336813", "kind": "确认个人招聘偏好", "subject": "岗位族专项｜需要独立判断的产品岗位", "resolution": "用户已确认完整规则；写入正式偏好主档案"}
+{"time": "2026-07-23T15:39:18+08:00", "action": "preference.resolved", "pending_id": "PENDING-20260723153918336813", "preference_id": "PREF-20260723153918336813", "decision": "确认", "preference_type": "岗位族专项", "scope": "需要独立判断的产品岗位", "retained_rejection": false}
+{"time": "2026-07-23T15:39:18+08:00", "action": "position.created", "position": "企业AI产品经理", "position_id": "POS-2026-001"}
+{"time": "2026-07-23T15:39:18+08:00", "action": "history.searched", "query": "企业AI产品经理", "position": "企业AI产品经理", "count": 0}
+{"time": "2026-07-23T15:39:18+08:00", "action": "resume.ingested", "candidate": "陈曦", "position": "企业AI产品经理", "path": "02_岗位/企业AI产品经理/候选人/陈曦/陈曦-企业AI产品经理.txt", "sha256": "dd82abce7b49d6e17b2d814892629f9c4adab248e093128e89ea4ee691c2b5d1", "extraction_method": "直接读取", "extraction_status": "通过", "ocr_pages": [], "unresolved_pages": []}
+{"time": "2026-07-23T15:39:18+08:00", "action": "resume.analysis_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "recommendation": "强推"}
+{"time": "2026-07-23T15:39:18+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 0}
+{"time": "2026-07-23T15:39:18+08:00", "action": "daily_brief.facts_prepared", "positions": 1, "candidates": 1, "pending": 0, "resume_inbox": 0, "interview_inbox": 0}
+{"time": "2026-07-23T15:39:18+08:00", "action": "screening.confirmed", "candidate": "陈曦", "position": "企业AI产品经理", "decision": "推进", "reason": ""}
+{"time": "2026-07-23T15:39:18+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 0}
+{"time": "2026-07-23T15:39:18+08:00", "action": "interview.ingested", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1, "sha256": "3d6daf3bd6b1607d04e0e4b6777c37e5494e9e015f90f858858bd9826433cc4d", "extraction_method": "直接读取", "extraction_status": "通过", "ocr_pages": [], "unresolved_pages": []}
+{"time": "2026-07-23T15:39:18+08:00", "action": "interview.analysis_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1}
+{"time": "2026-07-23T15:39:18+08:00", "action": "interview.decision_recorded", "candidate": "陈曦", "position": "企业AI产品经理", "round": 1, "decision": "通过，进入终面", "reason": ""}
+{"time": "2026-07-23T15:39:18+08:00", "action": "final_brief.generated", "candidate": "陈曦", "position": "企业AI产品经理", "path": "02_岗位/企业AI产品经理/候选人/陈曦/03_终面/终面简报.md"}
+{"time": "2026-07-23T15:39:18+08:00", "action": "candidate.archived", "candidate": "陈曦", "position": "企业AI产品经理", "result": "HC暂停，未录用；面试通过，人才保留", "closure_category": "HC、预算或业务变化", "reusable": true, "reuse_level": "优先复用", "path": "03_简历库/企业AI产品经理/陈曦"}
+{"time": "2026-07-23T15:39:18+08:00", "action": "indexes.rebuilt", "positions": 1, "candidates": 1, "reusable": 1}
+{"time": "2026-07-23T15:39:18+08:00", "action": "history.searched", "query": "企业 AI 知识助手", "position": "", "count": 1}
+{"time": "2026-07-23T15:39:18+08:00", "action": "position.calibration_generated", "position": "企业AI产品经理", "records": 1}
