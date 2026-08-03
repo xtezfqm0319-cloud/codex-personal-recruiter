@@ -170,6 +170,56 @@ def validate_workspace(root: Path) -> list[ValidationIssue]:
         except Exception as exc:
             issues.append(ValidationIssue("ERROR", "PREFERENCE_FILE", str(preference_path.relative_to(root)), str(exc)))
 
+    calibration_path = root / "04_全局索引" / "首次招聘判断校准.md"
+    if calibration_path.exists():
+        try:
+            calibration_data, calibration_body = read_markdown(calibration_path)
+            status = str(calibration_data.get("status", ""))
+            if status not in {"进行中", "已暂停", "待确认", "已完成"}:
+                issues.append(
+                    ValidationIssue("ERROR", "CALIBRATION_STATUS", str(calibration_path.relative_to(root)), f"无效状态：{status}")
+                )
+            for heading in (
+                "## 一、校准进度",
+                "## 二、逐题记录",
+                "## 三、初步规则候选",
+                "## 四、待观察倾向",
+                "## 五、明确不作推断",
+                "## 六、效果预演",
+                "## 七、确认结果",
+            ):
+                if heading not in calibration_body:
+                    issues.append(
+                        ValidationIssue("ERROR", "CALIBRATION_STRUCTURE", str(calibration_path.relative_to(root)), f"缺少校准字段：{heading}")
+                    )
+            type_to_field = {
+                "核心问题": "core_questions_answered",
+                "针对性追问": "followups_answered",
+                "反向验证": "reverse_checks_answered",
+            }
+            for question_type, field in type_to_field.items():
+                actual = len(re.findall(rf"(?m)^- 类型：{re.escape(question_type)}\s*$", calibration_body))
+                recorded = int(calibration_data.get(field) or 0)
+                if actual != recorded:
+                    issues.append(
+                        ValidationIssue(
+                            "ERROR",
+                            "CALIBRATION_COUNT",
+                            str(calibration_path.relative_to(root)),
+                            f"{question_type}记录 {recorded} 条，实际 {actual} 条",
+                        )
+                    )
+            if int(calibration_data.get("followups_answered") or 0) > 2:
+                issues.append(ValidationIssue("ERROR", "CALIBRATION_LIMIT", str(calibration_path.relative_to(root)), "针对性追问超过 2 题"))
+            if int(calibration_data.get("reverse_checks_answered") or 0) > 1:
+                issues.append(ValidationIssue("ERROR", "CALIBRATION_LIMIT", str(calibration_path.relative_to(root)), "反向验证超过 1 题"))
+            if status in {"待确认", "已完成"}:
+                placeholders = ("待完成对话后生成", "待完成对话后用模拟候选人")
+                if any(placeholder in calibration_body for placeholder in placeholders):
+                    issues.append(ValidationIssue("ERROR", "CALIBRATION_INCOMPLETE", str(calibration_path.relative_to(root)), "待确认或已完成校准仍包含未生成内容"))
+        except Exception as exc:
+            issues.append(ValidationIssue("ERROR", "CALIBRATION_FILE", str(calibration_path.relative_to(root)), str(exc)))
+
     daily_brief = root / "04_全局索引" / "今日招聘简报.md"
     if daily_brief.exists():
         daily_text = daily_brief.read_text(encoding="utf-8")
