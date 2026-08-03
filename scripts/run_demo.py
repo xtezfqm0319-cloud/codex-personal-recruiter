@@ -24,6 +24,10 @@ from recruiter.workflows import (  # noqa: E402
     record_interview_analysis,
     record_resume_analysis,
     resolve_recruiting_preference,
+    start_preference_calibration,
+    record_preference_calibration_answer,
+    summarize_preference_calibration,
+    complete_preference_calibration,
     search_history,
     set_interview_decision,
 )
@@ -46,8 +50,49 @@ def main() -> int:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(PROJECT / relative, target)
     (root / "04_全局索引" / "待确认事项.md").write_text("# 待确认事项\n", encoding="utf-8")
+    (root / "05_共享模板").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        PROJECT / "05_共享模板" / "首次招聘判断校准模板.md",
+        root / "05_共享模板" / "首次招聘判断校准模板.md",
+    )
 
     steps: list[str] = []
+    start_preference_calibration(root)
+    calibration_answers = (
+        ("CAL-Q1", "证据门槛与面试投入", "选潜力信号强且可低成本验证的人"),
+        ("CAL-Q2", "个人贡献与团队结果", "先看能说清关键取舍和结果边界的人"),
+        ("CAL-Q3", "精确经验与可迁移能力", "有适应时间时可接受可迁移能力"),
+        ("CAL-Q4", "确定性与潜力风险", "失败代价中等时允许有验证路径的不确定性"),
+        ("CAL-Q5", "汇报与决策交互", "默认先给先约谁和最小确认项"),
+    )
+    for question_id, dimension, answer in calibration_answers:
+        record_preference_calibration_answer(
+            root,
+            question_id,
+            "核心问题",
+            dimension,
+            f"演示用取舍情境：{dimension}",
+            answer,
+            f"初步理解：{answer}，但不扩大为无条件门槛。",
+            "岗位时间、失败代价或验证成本改变时需重新判断。",
+        )
+    record_preference_calibration_answer(
+        root,
+        "CAL-R1",
+        "反向验证",
+        "个人贡献证据的停止条件",
+        "如果候选人不是最终负责人，但能证明职责范围内的关键取舍，是否仍认为证据不足",
+        "不，职责范围内的清晰贡献仍然有效。",
+        "用户要求的是个人贡献边界，不是必须拥有最高职务或最终负责人头衔。",
+        "能证明职责范围内关键取舍时，不因非最终负责人而降低判断。",
+    )
+    summarize_preference_calibration(
+        root,
+        "1. 团队结果不能直接证明个人贡献；要求本人关键取舍和结果边界证据。",
+        "- 对可迁移能力的偏好受上手时间影响，暂作观察。",
+        "- 不推断候选人必须是项目最终负责人。\n- 不把简历表达质量直接等同于能力。",
+        "- 未使用时可能因大项目结果优先 A；使用后优先能说清个人取舍的 B。若 A 补充本人关键贡献证据，结论可反转。",
+    )
     preference = {
         "preference_type": "岗位族专项",
         "scope": "需要独立判断的产品岗位",
@@ -60,7 +105,8 @@ def main() -> int:
     }
     pending_preference = propose_recruiting_preference(root, **preference)
     resolve_recruiting_preference(root, "确认", **preference)
-    steps.append(f"学习并确认个人招聘偏好：{pending_preference}；未确认前不生效，确认后写入正式主档案")
+    complete_preference_calibration(root, "- 规则 1：已确认并写入正式偏好。\n- 其余倾向：保留观察，不影响正式判断。")
+    steps.append(f"首次招聘判断校准：5 个核心情境 + 1 个反向验证；{pending_preference} 确认后才写入正式主档案")
 
     fixtures = PROJECT / "06_系统" / "tests" / "fixtures"
     jd = (fixtures / "企业AI产品经理-JD.txt").read_text(encoding="utf-8")
