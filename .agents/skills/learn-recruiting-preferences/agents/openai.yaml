@@ -1,4 +1,4 @@
 interface:
   display_name: "学习招聘判断偏好"
-  short_description: "把明确反馈转成有范围、有例外且经确认的选人规则"
-  default_prompt: "使用 $learn-recruiting-preferences 分析我的这条反馈，区分个案决定和可复用偏好，并在确认前展示完整规则、范围和例外。"
+  short_description: "用情境校准或明确反馈，形成经确认的选人规则"
+  default_prompt: "使用 $learn-recruiting-preferences 通过逐题情境校准或我的明确反馈，区分个案决定和可复用偏好，在确认前展示完整规则、范围、例外和实际影响。"
