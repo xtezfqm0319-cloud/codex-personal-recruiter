@@ -21,6 +21,11 @@ from recruiter.workflows import (
     record_interview_analysis,
     record_resume_analysis,
     resolve_recruiting_preference,
+    start_preference_calibration,
+    record_preference_calibration_answer,
+    set_preference_calibration_status,
+    summarize_preference_calibration,
+    complete_preference_calibration,
     search_history,
     set_interview_decision,
 )
@@ -388,6 +393,98 @@ def test_rejected_preference_is_not_active_by_default(workspace: Path) -> None:
     propose_recruiting_preference(workspace, **values)
     resolve_recruiting_preference(workspace, "拒绝", **values)
     assert preference_path.read_text(encoding="utf-8") == before
+
+
+def test_first_use_calibration_pauses_resumes_and_only_applies_confirmed_rules(workspace: Path) -> None:
+    preference_path = workspace / "00_公司认知" / "个人招聘判断偏好.md"
+    formal_before = preference_path.read_text(encoding="utf-8")
+    calibration = start_preference_calibration(workspace)
+    assert calibration.name == "首次招聘判断校准.md"
+
+    dimensions = (
+        "证据门槛与面试投入",
+        "个人贡献与团队结果",
+        "精确经验与可迁移能力",
+        "确定性与潜力风险",
+        "汇报与决策交互",
+    )
+    for index, dimension in enumerate(dimensions, 1):
+        record_preference_calibration_answer(
+            workspace,
+            f"CAL-Q{index}",
+            "核心问题",
+            dimension,
+            f"模拟取舍情境 {index}",
+            "用户选择了有反转条件的方案。",
+            "当证据可以低成本验证时，不仅因材料简略而放弃。",
+            "高验证成本或岗位紧急时不适用。",
+        )
+        if index == 1:
+            set_preference_calibration_status(workspace, "已暂停")
+            paused, _ = read_markdown(calibration)
+            assert paused["status"] == "已暂停"
+            set_preference_calibration_status(workspace, "进行中")
+
+    record_preference_calibration_answer(
+        workspace,
+        "CAL-R1",
+        "反向验证",
+        "证据门槛反向验证",
+        "当验证成本明显升高时是否仍先约高潜力候选人",
+        "不会。",
+        "该倾向是有条件的面试投入取舍。",
+        "关键经历无法低成本验证时，应先选证据完整者。",
+    )
+    summarize_preference_calibration(
+        workspace,
+        "1. 对可低成本验证的高潜力信号，不因简历表达简略而直接降低面试优先级。",
+        "- 对可迁移能力存在条件性倾向，留待真实案例观察。",
+        "- 不推断用户普遍偏爱证据不足的候选人。",
+        "- 模拟 A 证据完整，B 潜力信号强且可电话核验；使用规则后先约 B，若核验成本升高则反转为 A。",
+    )
+    assert preference_path.read_text(encoding="utf-8") == formal_before
+    calibration_data, calibration_body = read_markdown(calibration)
+    assert calibration_data["status"] == "待确认"
+    assert calibration_data["core_questions_answered"] == 5
+    assert calibration_data["reverse_checks_answered"] == 1
+    assert "模拟 A" in calibration_body
+
+    preference = {
+        "preference_type": "通用招聘判断",
+        "scope": "关键经历尚可通过低成本面试验证的简历筛选",
+        "rule": "当候选人有具体高潜力信号，且关键经历可低成本验证时，不因简历表达简略而直接降低面试优先级。",
+        "effect": "影响简历排序和面试验证计划",
+        "evidence_standard": "必须存在具体潜力信号及可执行的低成本验证问题",
+        "exceptions": "验证成本高、岗位紧急或基础能力不匹配时不适用",
+        "counterexample": "候选人只有模糊的大项目名称，却无可验证的个人信号",
+        "source": "首次校准 CAL-Q1 及 CAL-R1，用户确认规则 1。",
+    }
+    propose_recruiting_preference(workspace, **preference)
+    resolve_recruiting_preference(workspace, "确认", **preference)
+    complete_preference_calibration(workspace, "- 规则 1：已确认并写入正式偏好；其余倾向保留观察。")
+    completed, completed_body = read_markdown(calibration)
+    assert completed["status"] == "已完成"
+    assert "规则 1：已确认" in completed_body
+    assert not [issue for issue in validate_workspace(workspace) if issue.level == "ERROR"]
+
+
+def test_first_use_calibration_rejects_duplicate_and_empty_summary(workspace: Path) -> None:
+    start_preference_calibration(workspace)
+    with pytest.raises(ValueError, match="至少记录一道"):
+        summarize_preference_calibration(workspace, "1. 规则", "- 观察", "- 不推断", "- 预演")
+    values = (
+        workspace,
+        "CAL-Q1",
+        "核心问题",
+        "证据门槛",
+        "A 与 B 的取舍",
+        "选 A",
+        "更重视已有证据",
+        "如验证成本很低可以例外",
+    )
+    record_preference_calibration_answer(*values)
+    with pytest.raises(ValueError, match="already recorded"):
+        record_preference_calibration_answer(*values)
 
 
 def test_prepare_daily_brief_builds_fact_sheet_without_invented_priority(workspace: Path) -> None:

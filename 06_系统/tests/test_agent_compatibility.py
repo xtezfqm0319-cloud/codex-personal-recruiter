@@ -245,6 +245,10 @@ def test_learn_preferences_has_detailed_chinese_contract() -> None:
     )
     reference = reference_path.read_text(encoding="utf-8")
     template = (PROJECT_ROOT / "05_共享模板/个人招聘判断偏好模板.md").read_text(encoding="utf-8")
+    calibration_reference = (
+        PROJECT_ROOT / ".agents/skills/learn-recruiting-preferences/references/首次使用招聘判断校准规范.md"
+    ).read_text(encoding="utf-8")
+    calibration_template = (PROJECT_ROOT / "05_共享模板/首次招聘判断校准模板.md").read_text(encoding="utf-8")
 
     assert "[个人招聘偏好识别与应用规范](references/个人招聘偏好识别与应用规范.md)" in skill
     assert "个案决定" in skill and "不可学习内容" in skill
@@ -260,6 +264,11 @@ def test_learn_preferences_has_detailed_chinese_contract() -> None:
         assert heading in reference
     for field in ("完整规则", "决策影响", "证据要求", "已知反例", "不得进一步推出"):
         assert field in template
+    assert "[首次使用招聘判断校准规范](references/首次使用招聘判断校准规范.md)" in skill
+    for heading in ("## 4. 五个核心情境", "## 6. 反向验证", "## 8. 效果预演", "## 11. 完成前自检"):
+        assert heading in calibration_reference
+    for field in ("逐题记录", "初步规则候选", "明确不作推断", "效果预演", "确认结果"):
+        assert field in calibration_template
 
 
 def test_daily_brief_has_detailed_chinese_contract() -> None:
@@ -299,6 +308,8 @@ def test_recruiting_workbench_controller_routes_and_continues_tasks() -> None:
     assert "总入口只负责理解、路由、编排、连续推进和统一交付" in skill
     assert "前两个" in skill and "按刚才建议执行" in skill
     assert "证据已足够，可以决定" in skill
+    assert "先校准一下我的招聘偏好" in skill
+    assert "首次校准的非阻塞路由" in reference
     assert "结果 → 关键判断 → 只需用户决定 → 接下来" in agents
     assert "$run-recruiting-workbench" in agents
     assert "招聘工作台总入口" in metadata

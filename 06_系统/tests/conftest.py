@@ -15,6 +15,7 @@ def workspace(tmp_path: Path) -> Path:
         "02_岗位",
         "03_简历库",
         "04_全局索引",
+        "05_共享模板",
         "07_运行记录",
     ]:
         (tmp_path / directory).mkdir(parents=True, exist_ok=True)
@@ -36,6 +37,10 @@ def workspace(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (tmp_path / "04_全局索引" / "待确认事项.md").write_text("# 待确认事项\n", encoding="utf-8")
+    source_template = Path(__file__).resolve().parents[2] / "05_共享模板" / "首次招聘判断校准模板.md"
+    (tmp_path / "05_共享模板" / source_template.name).write_text(
+        source_template.read_text(encoding="utf-8"), encoding="utf-8"
+    )
     (tmp_path / "07_运行记录" / "actions.jsonl").write_text("", encoding="utf-8")
     (tmp_path / "07_运行记录" / "errors.jsonl").write_text("", encoding="utf-8")
     return tmp_path
