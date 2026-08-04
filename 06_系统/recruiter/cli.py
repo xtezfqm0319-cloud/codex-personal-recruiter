@@ -18,11 +18,16 @@ from .workflows import (
     init_workspace,
     prepare_daily_brief,
     propose_recruiting_preference,
+    record_preference_calibration_answer,
     record_interview_analysis,
     record_resume_analysis,
     resolve_recruiting_preference,
     search_history,
+    set_preference_calibration_status,
     set_interview_decision,
+    start_preference_calibration,
+    summarize_preference_calibration,
+    complete_preference_calibration,
 )
 
 
@@ -165,6 +170,29 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="retain a brief rejected note only when it prevents the same mistaken inference",
     )
+
+    sub.add_parser("start-preference-calibration", help="start or resume the first-use recruiting judgment calibration")
+
+    answer = sub.add_parser("record-calibration-answer", help="record one first-use calibration answer")
+    answer.add_argument("--question-id", required=True)
+    answer.add_argument("--question-type", required=True, choices=["核心问题", "针对性追问", "反向验证"])
+    answer.add_argument("--dimension", required=True)
+    answer.add_argument("--scenario", required=True)
+    answer.add_argument("--answer", required=True)
+    answer.add_argument("--interpretation", required=True)
+    answer.add_argument("--boundary", required=True)
+
+    calibration_status = sub.add_parser("set-calibration-status", help="pause or resume first-use calibration")
+    calibration_status.add_argument("--status", required=True, choices=["进行中", "已暂停"])
+
+    calibration_summary = sub.add_parser("summarize-preference-calibration", help="write calibration candidates without activating them")
+    calibration_summary.add_argument("--candidate-rules", required=True)
+    calibration_summary.add_argument("--observations", required=True)
+    calibration_summary.add_argument("--non-inferences", required=True)
+    calibration_summary.add_argument("--preview", required=True)
+
+    calibration_complete = sub.add_parser("complete-preference-calibration", help="close calibration after numbered rules are resolved")
+    calibration_complete.add_argument("--confirmation-summary", required=True)
 
     sub.add_parser("prepare-daily-brief", help="prepare a deterministic daily recruiting fact sheet for AI prioritization")
     sub.add_parser("rebuild-index", help="rebuild every CSV and position table from Markdown masters")
@@ -329,6 +357,36 @@ def main(argv: list[str] | None = None) -> int:
                 args.retain_rejection,
             )
             _print({"status": "ok", "decision": args.decision, "path": path.relative_to(root)})
+        elif args.command == "start-preference-calibration":
+            path = start_preference_calibration(root)
+            _print({"status": "ok", "path": path.relative_to(root)})
+        elif args.command == "record-calibration-answer":
+            path = record_preference_calibration_answer(
+                root,
+                args.question_id,
+                args.question_type,
+                args.dimension,
+                args.scenario,
+                args.answer,
+                args.interpretation,
+                args.boundary,
+            )
+            _print({"status": "ok", "path": path.relative_to(root)})
+        elif args.command == "set-calibration-status":
+            path = set_preference_calibration_status(root, args.status)
+            _print({"status": "ok", "path": path.relative_to(root), "calibration_status": args.status})
+        elif args.command == "summarize-preference-calibration":
+            path = summarize_preference_calibration(
+                root,
+                args.candidate_rules,
+                args.observations,
+                args.non_inferences,
+                args.preview,
+            )
+            _print({"status": "pending_confirmation", "path": path.relative_to(root)})
+        elif args.command == "complete-preference-calibration":
+            path = complete_preference_calibration(root, args.confirmation_summary)
+            _print({"status": "ok", "path": path.relative_to(root)})
         elif args.command == "prepare-daily-brief":
             path = prepare_daily_brief(root)
             _print({"status": "ok", "path": path.relative_to(root)})

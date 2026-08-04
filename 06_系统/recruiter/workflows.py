@@ -26,6 +26,8 @@ INTERVIEW_INCLINATIONS = ("建议推进", "继续验证", "建议暂缓", "不�
 REUSE_LEVELS = ("优先复用", "有条件复用", "暂不主动复用", "不建议复用")
 PREFERENCE_TYPES = ("通用招聘判断", "岗位族专项", "交互偏好")
 PREFERENCE_DECISIONS = ("确认", "拒绝")
+CALIBRATION_STATUSES = ("进行中", "已暂停", "待确认", "已完成")
+CALIBRATION_QUESTION_TYPES = ("核心问题", "针对性追问", "反向验证")
 CLOSURE_CATEGORIES = (
     "已录用",
     "能力或证据未达要求",
@@ -1458,6 +1460,166 @@ def resolve_recruiting_preference(
         scope=values["scope"],
         retained_rejection=retain_rejection,
     )
+    return path
+
+
+def _calibration_path(root: Path) -> Path:
+    return root / "04_全局索引" / "首次招聘判断校准.md"
+
+
+def _refresh_calibration_progress(data: dict, body: str) -> str:
+    return _replace_section(
+        body,
+        "## 一、校准进度",
+        f"- 核心问题：{int(data.get('core_questions_answered') or 0)} / 5\n"
+        f"- 针对性追问：{int(data.get('followups_answered') or 0)} / 最多 2\n"
+        f"- 反向验证：{int(data.get('reverse_checks_answered') or 0)} / 1\n"
+        f"- 当前状态：{data.get('status', '未开始')}",
+    )
+
+
+def start_preference_calibration(root: Path) -> Path:
+    """创建或续接首次校准工作稿；不修改正式个人偏好主档案。"""
+    path = _calibration_path(root)
+    if path.exists():
+        data, _ = read_markdown(path)
+        if data.get("status") == "已完成":
+            raise ValueError("首次校准已完成；如需新增偏好，请基于具体反馈提出新规则")
+        log_action(root, "preference_calibration.resumed", path=str(path.relative_to(root)))
+        return path
+
+    template = root / "05_共享模板" / "首次招聘判断校准模板.md"
+    if not template.exists():
+        raise FileNotFoundError(template)
+    data, body = read_markdown(template)
+    data.update(
+        {
+            "status": "进行中",
+            "started_at": today(),
+            "updated_at": today(),
+            "core_questions_answered": 0,
+            "followups_answered": 0,
+            "reverse_checks_answered": 0,
+        }
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_markdown(path, data, _refresh_calibration_progress(data, body))
+    log_action(root, "preference_calibration.started", path=str(path.relative_to(root)))
+    return path
+
+
+def set_preference_calibration_status(root: Path, status: str) -> Path:
+    if status not in {"进行中", "已暂停"}:
+        raise ValueError("Calibration status can only be 进行中 or 已暂停 here")
+    path = _calibration_path(root)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    data, body = read_markdown(path)
+    if data.get("status") in {"待确认", "已完成"}:
+        raise ValueError("当前校准已进入确认或完成阶段，不能切换为问答状态")
+    data["status"] = status
+    data["updated_at"] = today()
+    write_markdown(path, data, _refresh_calibration_progress(data, body))
+    log_action(root, "preference_calibration.status_changed", status=status)
+    return path
+
+
+def record_preference_calibration_answer(
+    root: Path,
+    question_id: str,
+    question_type: str,
+    dimension: str,
+    scenario: str,
+    answer: str,
+    interpretation: str,
+    boundary: str,
+) -> Path:
+    if question_type not in CALIBRATION_QUESTION_TYPES:
+        raise ValueError(f"Question type must be one of: {', '.join(CALIBRATION_QUESTION_TYPES)}")
+    values = {
+        "question_id": _required(question_id, "question_id"),
+        "dimension": _required(dimension, "dimension"),
+        "scenario": _required(scenario, "scenario"),
+        "answer": _required(answer, "answer"),
+        "interpretation": _required(interpretation, "interpretation"),
+        "boundary": _required(boundary, "boundary"),
+    }
+    path = _calibration_path(root)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    data, body = read_markdown(path)
+    if data.get("status") not in {"进行中", "已暂停"}:
+        raise ValueError("只能在进行中或已暂停的校准工作稿中记录答案")
+    if re.search(rf"(?m)^### {re.escape(values['question_id'])}\s*$", body):
+        raise ValueError(f"Calibration question already recorded: {values['question_id']}")
+
+    entry = f"""### {values['question_id']}
+
+- 类型：{question_type}
+- 维度：{values['dimension']}
+- 情境：{values['scenario']}
+- 用户回答：{values['answer']}
+- 当前理解：{values['interpretation']}
+- 边界或例外：{values['boundary']}"""
+    if not re.search(r"(?m)^### CAL-", body):
+        body = _replace_section(body, "## 二、逐题记录", entry)
+    else:
+        body = _append_section_entry(body, "## 二、逐题记录", entry)
+    count_field = {
+        "核心问题": "core_questions_answered",
+        "针对性追问": "followups_answered",
+        "反向验证": "reverse_checks_answered",
+    }[question_type]
+    maximum = {"核心问题": 5, "针对性追问": 2, "反向验证": 1}[question_type]
+    if int(data.get(count_field) or 0) >= maximum:
+        raise ValueError(f"{question_type}最多记录 {maximum} 题")
+    data[count_field] = int(data.get(count_field) or 0) + 1
+    data["status"] = "进行中"
+    data["updated_at"] = today()
+    write_markdown(path, data, _refresh_calibration_progress(data, body))
+    log_action(root, "preference_calibration.answer_recorded", question_id=values["question_id"], question_type=question_type)
+    return path
+
+
+def summarize_preference_calibration(
+    root: Path,
+    candidate_rules: str,
+    observations: str,
+    non_inferences: str,
+    preview: str,
+) -> Path:
+    path = _calibration_path(root)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    data, body = read_markdown(path)
+    answered = sum(int(data.get(field) or 0) for field in (
+        "core_questions_answered", "followups_answered", "reverse_checks_answered"
+    ))
+    if answered == 0:
+        raise ValueError("至少记录一道校准问题后才能生成总结")
+    body = _replace_section(body, "## 三、初步规则候选", _required(candidate_rules, "candidate_rules"))
+    body = _replace_section(body, "## 四、待观察倾向", _required(observations, "observations"))
+    body = _replace_section(body, "## 五、明确不作推断", _required(non_inferences, "non_inferences"))
+    body = _replace_section(body, "## 六、效果预演", _required(preview, "preview"))
+    data["status"] = "待确认"
+    data["updated_at"] = today()
+    write_markdown(path, data, _refresh_calibration_progress(data, body))
+    log_action(root, "preference_calibration.summarized", answered=answered)
+    return path
+
+
+def complete_preference_calibration(root: Path, confirmation_summary: str) -> Path:
+    path = _calibration_path(root)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    data, body = read_markdown(path)
+    if data.get("status") != "待确认":
+        raise ValueError("只有待确认的校准工作稿才能完成")
+    body = _replace_section(body, "## 七、确认结果", _required(confirmation_summary, "confirmation_summary"))
+    data["status"] = "已完成"
+    data["updated_at"] = today()
+    write_markdown(path, data, _refresh_calibration_progress(data, body))
+    log_action(root, "preference_calibration.completed")
     return path
 
 

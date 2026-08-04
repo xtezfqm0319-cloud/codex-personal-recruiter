@@ -58,10 +58,12 @@ description: 作为本地个人招聘工作台的默认对话总入口，理解�
 - 结束流程和归档：`$close-candidate`
 - 查找历史人才：`$search-history`
 - 复盘岗位定义和筛选误判：`$calibrate-position`
-- 学习用户明确反馈：`$learn-recruiting-preferences`
+- 首次校准选人取舍，或学习用户明确反馈：`$learn-recruiting-preferences`
 - 今天先做什么、跨岗位注意力安排：`$daily-recruiting-brief`
 
 不要重复调用已经包含在专业流程内的步骤。例如 `$process-resumes` 已要求完成岗位内比较时，不再为形式完整重复生成第二套比较。
+
+用户说“先校准一下我的招聘偏好”“先了解我怎么选人”时，直接进入 `$learn-recruiting-preferences` 的首次校准模式。若当前没有已确认偏好，可在完成首个真实任务后非阻塞地邀请一次；不得在任务前强制校准，不得重复邀请，未确认的校准结果不得用于候选人判断。
 
 ### 4. 连续完成无需用户介入的工作
 
